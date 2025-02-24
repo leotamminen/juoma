@@ -1,0 +1,391 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light Theme (Default) */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --link-color: #ffa51e;
+  --footer-background: #222;
+  --footer-foreground: #ffffff;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --link-color: #ffa51e;
+  --footer-background: #171717;
+  --footer-foreground: #d1d1d1;
+}
+
+/* Apply Colors to Everything */
+body {
+  color: var(--foreground);
+  background: var(--background);
+  transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* Navbar */
+.navbar {
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* Dark Mode Toggle */
+.dark-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* Hide default checkbox */
+.dark-mode-checkbox {
+  display: none;
+}
+
+/* Toggle background */
+.dark-mode-label {
+  width: 50px;
+  height: 25px;
+  background: #ddd;
+  border-radius: 50px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.3s ease-in-out;
+}
+
+/* Ball inside the toggle */
+.dark-mode-ball {
+  width: 22px;
+  height: 22px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  transition: left 0.3s ease-in-out, background 0.3s ease-in-out;
+}
+
+/* When checked (Dark Mode On) */
+.dark-mode-checkbox:checked + .dark-mode-label {
+  background: #222;
+}
+
+.dark-mode-checkbox:checked + .dark-mode-label .dark-mode-ball {
+  left: 25px;
+  background: #ffa51e;
+}
+
+/* Footer */
+.footer {
+  background-color: var(--footer-background);
+  color: var(--footer-foreground);
+}
+
+/* General container for all pages */
+.general-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: var(--background);
+  color: var(--foreground);
+  transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* General title styles */
+.general-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* General description styles */
+.general-description {
+  text-align: center;
+  max-width: 600px;
+  font-size: 1.125rem;
+}
+
+/* General button styles */
+.general-button {
+  margin: 0.75rem 0.75rem 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--link-color);
+  color: white;
+  font-weight: bold;
+  border-radius: 8px;
+  transition: background-color 0.3s ease-in-out, transform 0.3s ease-out;
+  transform: scale(1); /* Ensure initial scale is 1 */
+}
+
+/* Smooth hover effect */
+.general-button:hover {
+  background-color: #ec8320;
+  transform: scale(1.2); /* Slightly larger for a smooth effect */
+}
+
+/* Here starts game and player related styles ... */
+
+/* Player Input Container */
+.player-input-container {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  align-items: center;
+}
+
+/* Player Input Field */
+.player-input {
+  padding: 0.75rem 1.5rem;
+  border: 2px solid var(--foreground);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: var(--background);
+  color: var(--foreground);
+  transition: border-color 0.2s ease-in-out;
+  height: 3rem;
+  line-height: 1.25rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+.player-input:focus {
+  border-color: var(--link-color);
+  outline: none;
+}
+
+/* Player List */
+.player-list {
+  margin-top: 20px;
+  list-style: none;
+  padding: 0;
+}
+
+.player-item {
+  background: var(--background);
+  color: var(--foreground);
+  padding: 10px;
+  margin-top: 5px;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Make Player Item Scale Slightly on Hover */
+.player-item:hover {
+  transform: scale(1.1);
+}
+
+/* Start Button */
+.start-button {
+  margin-top: 20px;
+  padding: 0.75rem 2rem;
+  font-size: 1.2rem;
+}
+
+/* Spin the bottle */
+
+/* Spin Button */
+.spin-button {
+  margin-top: 20px;
+  padding: 0.75rem 2rem;
+  font-size: 1.2rem;
+  background-color: green;
+}
+
+.spin-button:hover {
+  background-color: darkgreen;
+}
+
+/* Spinning Effect */
+.spin-button:disabled {
+  background-color: gray;
+  cursor: not-allowed;
+}
+
+/* Spin Result */
+.spin-result {
+  margin: 20px 0 20px;
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: var(--link-color);
+  text-align: center;
+}
+
+/* Layout for game sections */
+.game-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 800px;
+  margin-top: 20px;
+}
+
+/* Player Section */
+.player-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.player-list {
+  list-style: none;
+  padding: 0;
+}
+
+.player-item {
+  padding: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+/* Spin Section */
+.spin-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.spin-result {
+  margin-top: 15px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--link-color);
+  text-align: center;
+}
+
+/* Previous Drinkers Section */
+.history-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+}
+
+.history-item {
+  padding: 8px;
+  background: var(--footer-background);
+  color: var(--footer-foreground);
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+/* Player Item */
+.player-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--background);
+  color: var(--foreground);
+  padding: 8px;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 5px;
+  transition: background 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+/* Make the player item slightly larger on hover */
+.player-item:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Remove Button */
+.remove-button {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: color 0.2s ease-in-out;
+  color: red;
+}
+
+.remove-button:hover {
+  color: darkred;
+  transform: scale(1.1);
+}
+
+/* Audio Player Container */
+.audio-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+/* Individual Audio Items */
+.audio-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Song Title Text */
+.audio-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--foreground);
+}
+
+/* Placeholder */
+/* ----------- */
+
+/* Extra Task Styling */
+.extra-task {
+  font-style: italic;
+  color: var(--link-color);
+}
+
+/* Reroll Button */
+.reroll-button {
+  margin-top: 15px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease-in-out, transform 0.3s ease-out;
+}
+
+.reroll-button:hover {
+  background-color: #0056b3;
+}
+
+/* Placeholder */
+/* ----------- */
+
+/* Starter Player Text */
+.starter-text {
+  margin: 0 1rem 0 1rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--link-color);
+  text-align: center;
+  margin-top: 10px;
+}
