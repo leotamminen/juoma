@@ -52,6 +52,7 @@ const Viinapiru = ({
           { title: "🎵 Piiska (remix)", src: "/audio/song1.mp3" },
           { title: "🎵 Häkkine", src: "/audio/song2.mp3" },
           { title: "🎵 Salamanisku", src: "/audio/song3.mp3" },
+          { title: "🎵 Tempo", src: "/audio/song4.mp3" },
         ].map((song, index) => (
           <div className="audio-item" key={index}>
             <p className="audio-title">{song.title}</p>
