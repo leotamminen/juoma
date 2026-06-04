@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 type Suit = "hearts" | "spades" | "clubs" | "diamonds";
@@ -12,6 +12,8 @@ type Settings = {
   endgameScaling: "default" | "double" | "custom";
   customStart: number;
   extraRounds: boolean;
+  toastTimer: { enabled: boolean; seconds: number };
+  sipCounter: { enabled: boolean; startAt: number; every: number };
 };
 type ToastType = "drink" | "give" | "info";
 type Toast = { message: string; type: ToastType } | null;
@@ -72,14 +74,22 @@ function PlayingCard({ card, faceDown = false, small = false }: { card: Card; fa
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────
-function ToastOverlay({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+function ToastOverlay({ toast, progress, onDismiss }: { toast: Toast; progress: number; onDismiss: () => void }) {
   if (!toast) return null;
   const bg = toast.type === "drink" ? "bg-red-600" : toast.type === "give" ? "bg-green-600" : "bg-blue-600";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onDismiss}>
-      <div className={`${bg} text-white rounded-2xl px-8 py-8 text-center shadow-2xl max-w-xs mx-4`}>
+      <div className={`${bg} text-white rounded-2xl px-8 py-8 text-center shadow-2xl max-w-xs mx-4 w-72`}>
         <p className="text-2xl font-bold">{toast.message}</p>
         <p className="text-sm mt-3 opacity-70">Napauta sulkeaksesi</p>
+        {progress > 0 && (
+          <div className="mt-4 h-1.5 bg-white/20 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-white/70 rounded-full"
+              style={{ width: `${100 - progress}%`, transition: "width 50ms linear" }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -320,6 +330,8 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
     endgameScaling: "default",
     customStart: 2,
     extraRounds: true,
+    toastTimer: { enabled: true, seconds: 5 },
+    sipCounter: { enabled: true, startAt: 50, every: 10 },
   });
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
@@ -349,8 +361,61 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
 
   // ── Toast ──
   const [toast, setToast] = useState<Toast>(null);
+  const [toastProgress, setToastProgress] = useState(0);
 
-  const showToast = (message: string, type: ToastType) => setToast({ message, type });
+  // ── Sip counter ──
+  const [playerSips, setPlayerSips] = useState<number[]>([]);
+  const [sipAlert, setSipAlert] = useState<{ playerIdx: number; threshold: number } | null>(null);
+  const [pendingSipAlert, setPendingSipAlert] = useState<{ playerIdx: number; threshold: number } | null>(null);
+
+  // ── Auto-dismiss timer ──
+  useEffect(() => {
+    if (!toast || !settings.toastTimer.enabled) return;
+    const totalMs = settings.toastTimer.seconds * 1000;
+    let elapsed = 0;
+    const tick = 50;
+    const id = setInterval(() => {
+      elapsed += tick;
+      setToastProgress(Math.min((elapsed / totalMs) * 100, 100));
+      if (elapsed >= totalMs) {
+        clearInterval(id);
+        setToast(null);
+        setToastProgress(0);
+      }
+    }, tick);
+    return () => clearInterval(id);
+  }, [toast, settings.toastTimer.enabled, settings.toastTimer.seconds]);
+
+  // ── Promote sip alert after toast clears ──
+  useEffect(() => {
+    if (toast === null && pendingSipAlert) {
+      setSipAlert(pendingSipAlert);
+      setPendingSipAlert(null);
+    }
+  }, [toast, pendingSipAlert]);
+
+  const showToast = (message: string, type: ToastType) => {
+    setToastProgress(0);
+    setToast({ message, type });
+  };
+
+  const addSips = (playerIdx: number, amount: number) => {
+    if (!settings.sipCounter.enabled) return;
+    setPlayerSips(prev => {
+      const next = [...prev];
+      next[playerIdx] = (next[playerIdx] ?? 0) + amount;
+      return next;
+    });
+    const oldTotal = playerSips[playerIdx] ?? 0;
+    const newTotal = oldTotal + amount;
+    const { startAt, every } = settings.sipCounter;
+    for (let t = startAt; t <= newTotal; t += every) {
+      if (oldTotal < t) {
+        setPendingSipAlert({ playerIdx, threshold: t });
+        break;
+      }
+    }
+  };
 
   // ── Setup actions ──
   const addSetupPlayer = () => {
@@ -403,6 +468,9 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
     setCurrentCard(null);
     setRound1Hint(null);
     setIsCorrect(null);
+    setPlayerSips(ordered.map(() => 0));
+    setSipAlert(null);
+    setPendingSipAlert(null);
     setPhase("rounds");
   };
 
@@ -446,6 +514,7 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
       setShowPicker(true);
     } else {
       const sips = settings.sipsPerRound[currentRound - 1];
+      addSips(currentPlayerIdx, sips);
       showToast(`${players[currentPlayerIdx]} juo ${sips} huikkaa!`, "drink");
       finishTurn(currentCard, deckCursor);
     }
@@ -454,6 +523,7 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
   const handleGiveSips = (targetIdx: number) => {
     if (!currentCard) return;
     const sips = settings.sipsPerRound[currentRound - 1];
+    addSips(targetIdx, sips);
     setShowPicker(false);
     showToast(`${players[targetIdx]} juo ${sips} huikkaa!`, "give");
     finishTurn(currentCard, deckCursor);
@@ -652,6 +722,52 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
                   <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${settings.extraRounds ? "left-6" : "left-0.5"}`} />
                 </button>
               </div>
+
+              {/* Toast timer */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-300">Automaattinen kuittaus</span>
+                  <button onClick={() => setSettings(s => ({ ...s, toastTimer: { ...s.toastTimer, enabled: !s.toastTimer.enabled } }))}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${settings.toastTimer.enabled ? "bg-green-500" : "bg-gray-600"}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${settings.toastTimer.enabled ? "left-6" : "left-0.5"}`} />
+                  </button>
+                </div>
+                {settings.toastTimer.enabled && (
+                  <div className="flex items-center gap-3 mt-1">
+                    <input type="range" min={1} max={10} value={settings.toastTimer.seconds}
+                      onChange={e => setSettings(s => ({ ...s, toastTimer: { ...s.toastTimer, seconds: parseInt(e.target.value) } }))}
+                      className="flex-1 accent-blue-500" />
+                    <span className="text-sm font-bold w-8 text-right">{settings.toastTimer.seconds}s</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Sip counter */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-300">Hörppy-laskuri</span>
+                  <button onClick={() => setSettings(s => ({ ...s, sipCounter: { ...s.sipCounter, enabled: !s.sipCounter.enabled } }))}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${settings.sipCounter.enabled ? "bg-green-500" : "bg-gray-600"}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${settings.sipCounter.enabled ? "left-6" : "left-0.5"}`} />
+                  </button>
+                </div>
+                {settings.sipCounter.enabled && (
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">1. varoitus (huikat)</label>
+                      <input type="number" min={5} max={500} value={settings.sipCounter.startAt}
+                        onChange={e => setSettings(s => ({ ...s, sipCounter: { ...s.sipCounter, startAt: Math.max(5, parseInt(e.target.value) || 50) } }))}
+                        className="w-full px-2 py-2 bg-gray-700 rounded-lg text-center font-bold" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">Sen jälkeen joka</label>
+                      <input type="number" min={1} max={100} value={settings.sipCounter.every}
+                        onChange={e => setSettings(s => ({ ...s, sipCounter: { ...s.sipCounter, every: Math.max(1, parseInt(e.target.value) || 10) } }))}
+                        className="w-full px-2 py-2 bg-gray-700 rounded-lg text-center font-bold" />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -677,7 +793,20 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
 
     return (
       <div className="min-h-screen text-white p-4 max-w-md mx-auto pb-8">
-        <ToastOverlay toast={toast} onDismiss={() => setToast(null)} />
+        <ToastOverlay toast={toast} progress={toastProgress} onDismiss={() => setToast(null)} />
+
+        {/* Sip alert */}
+        {sipAlert && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setSipAlert(null)}>
+            <div className="bg-amber-900/95 border-2 border-amber-500 text-white rounded-2xl px-8 py-8 text-center shadow-2xl max-w-xs mx-4">
+              <p className="text-4xl mb-3">🍺</p>
+              <p className="text-xl font-bold mb-2">Ota välihuikka!</p>
+              <p className="text-gray-200">{players[sipAlert.playerIdx]} on juonut jo {sipAlert.threshold} huikkaa!</p>
+              <p className="text-xs mt-4 opacity-50">Napauta sulkeaksesi</p>
+            </div>
+          </div>
+        )}
+
         {showPicker && (
           <PlayerPicker players={players} excludeIndex={currentPlayerIdx} sips={sips} onPick={handleGiveSips} />
         )}
@@ -721,6 +850,21 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
               onGuess={handleRound4Guess} onContinue={handleRevealContinue} />
           )}
         </div>
+
+        {/* Sip counter bar */}
+        {settings.sipCounter.enabled && playerSips.length > 0 && (
+          <div className="mt-4 bg-gray-800/60 border border-gray-700 rounded-2xl p-3">
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Hörppy-laskuri</p>
+            <div className="flex gap-2 flex-wrap">
+              {players.map((p, i) => (
+                <div key={i} className={`flex-1 min-w-0 text-center px-2 py-1 rounded-xl ${i === currentPlayerIdx ? "bg-yellow-900/40 border border-yellow-700/50" : "bg-gray-900/40"}`}>
+                  <p className="text-xs text-gray-400 truncate">{p}</p>
+                  <p className="text-xl font-black text-amber-400">{playerSips[i] ?? 0}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -735,7 +879,7 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
 
     return (
       <div className="min-h-screen text-white p-4 max-w-md mx-auto pb-8">
-        <ToastOverlay toast={toast} onDismiss={() => setToast(null)} />
+        <ToastOverlay toast={toast} progress={toastProgress} onDismiss={() => setToast(null)} />
 
         <h1 className="text-3xl font-bold text-center mb-1 pt-2">🚌 Bussi!</h1>
         {!bussiDone && (
