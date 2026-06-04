@@ -47,7 +47,7 @@ export default function Play() {
           <Viinapiru players={players} onBack={goBackToSelection} />
         ) : selectedGame === "Malte" ? (
           <Malte players={players} onBack={goBackToSelection} />
-        ) : selectedGame === "Hitlter" ? (
+        ) : selectedGame === "Hitler" ? (
           <Hitler players={players} onBack={goBackToSelection} />
         ) : selectedGame === "Placeholder" ? (
           <Placeholder players={players} onBack={goBackToSelection} />
@@ -66,15 +66,11 @@ export default function Play() {
           </ul>
 
           <h2 className="general-title">Valitse peli:</h2>
-          <p className="general-description">
-            (Huom. ainoastaan Piiskapeli ja pullonpöritys on kunnolla toteutettu
-            tällä hetkellä.)
-          </p>
           <div className="game-selection-container">
             {[
               "Piiskapeli",
               "Malte",
-              "Hitlter",
+              "Hitler",
               "Placeholder",
               "Pullon Pyöritys",
             ].map((game) => (
