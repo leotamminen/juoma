@@ -130,10 +130,10 @@ function HandsStrip({ players, hands, activeIndex }: { players: string[]; hands:
 }
 
 // ── Round sub-UIs ──────────────────────────────────────────────────────────
-function Round1UI({ hand, currentCard, roundStep, hint, isCorrect, sips, onGuess, onGiveUp, onContinue }: {
+function Round1UI({ hand, currentCard, roundStep, hint, isCorrect, sips, onGuess, onContinue }: {
   hand: Card[]; currentCard: Card | null; roundStep: RoundStep;
   hint: "smaller" | "bigger" | null; isCorrect: boolean | null;
-  sips: number; onGuess: (n: number) => void; onGiveUp: () => void; onContinue: () => void;
+  sips: number; onGuess: (n: number) => void; onContinue: () => void;
 }) {
   void hand;
   return (
@@ -156,12 +156,6 @@ function Round1UI({ hand, currentCard, roundStep, hint, isCorrect, sips, onGuess
               </button>
             ))}
           </div>
-          {roundStep === "hinting" && (
-            <button onClick={onGiveUp}
-              className="w-full py-3 bg-red-800 hover:bg-red-700 rounded-xl font-semibold text-sm">
-              Luovutan – juo {sips} huikkaa
-            </button>
-          )}
         </>
       )}
 
@@ -478,18 +472,10 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
         setRoundStep("hinting");
       }
     } else {
-      if (guess === currentCard.value) {
-        setIsCorrect(true);
-        setRoundStep("revealed");
-      } else {
-        setRound1Hint(guess < currentCard.value ? "bigger" : "smaller");
-      }
+      // Second guess — correct or not, turn ends
+      setIsCorrect(guess === currentCard.value);
+      setRoundStep("revealed");
     }
-  };
-
-  const handleRound1GiveUp = () => {
-    setIsCorrect(false);
-    setRoundStep("revealed");
   };
 
   // ── Round 2 ──
@@ -717,7 +703,7 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
           {currentRound === 1 && (
             <Round1UI hand={hand} currentCard={currentCard} roundStep={roundStep}
               hint={round1Hint} isCorrect={isCorrect} sips={sips}
-              onGuess={handleRound1Guess} onGiveUp={handleRound1GiveUp} onContinue={handleRevealContinue} />
+              onGuess={handleRound1Guess} onContinue={handleRevealContinue} />
           )}
           {currentRound === 2 && (
             <Round2UI hand={hand} currentCard={currentCard} roundStep={roundStep}
