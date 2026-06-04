@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { type SoundPack, playDrink, playSipWarning, startBussMusic } from "./malteSounds";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 type Suit = "hearts" | "spades" | "clubs" | "diamonds";
@@ -14,6 +15,7 @@ type Settings = {
   extraRounds: boolean;
   toastTimer: { enabled: boolean; seconds: number };
   sipCounter: { enabled: boolean; startAt: number; every: number };
+  sounds: { enabled: boolean; pack: SoundPack };
 };
 type ToastType = "drink" | "give" | "info";
 type Toast = { message: string; type: ToastType } | null;
@@ -331,7 +333,8 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
     customStart: 2,
     extraRounds: true,
     toastTimer: { enabled: true, seconds: 5 },
-    sipCounter: { enabled: true, startAt: 50, every: 10 },
+    sipCounter: { enabled: true, startAt: 20, every: 10 },
+    sounds: { enabled: true, pack: "normal" as SoundPack },
   });
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
@@ -367,6 +370,53 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
   const [playerSips, setPlayerSips] = useState<number[]>([]);
   const [sipAlert, setSipAlert] = useState<{ playerIdx: number; threshold: number } | null>(null);
   const [pendingSipAlert, setPendingSipAlert] = useState<{ playerIdx: number; threshold: number } | null>(null);
+
+  // ── Audio ──
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const bussStopRef = useRef<(() => void) | null>(null);
+
+  const getAudio = () => {
+    if (typeof window === "undefined") return null;
+    if (!audioCtxRef.current) {
+      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      audioCtxRef.current = new AC();
+    }
+    return audioCtxRef.current;
+  };
+
+  // Play drink sound when a "drink" toast appears
+  useEffect(() => {
+    if (!toast || toast.type === "info" || !settings.sounds.enabled) return;
+    const ctx = getAudio();
+    if (ctx) playDrink(ctx, settings.sounds.pack);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast]);
+
+  // Sip warning sound
+  useEffect(() => {
+    if (!sipAlert || !settings.sounds.enabled) return;
+    const ctx = getAudio();
+    if (ctx) playSipWarning(ctx, settings.sounds.pack);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sipAlert]);
+
+  // Bus music — start when entering bussi, stop on leave
+  useEffect(() => {
+    if (phase !== "bussi" || !settings.sounds.enabled) {
+      bussStopRef.current?.();
+      bussStopRef.current = null;
+      return;
+    }
+    const ctx = getAudio();
+    if (!ctx) return;
+    if (ctx.state === "suspended") ctx.resume();
+    bussStopRef.current = startBussMusic(ctx, settings.sounds.pack);
+    return () => {
+      bussStopRef.current?.();
+      bussStopRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, settings.sounds.enabled, settings.sounds.pack]);
 
   // ── Auto-dismiss timer ──
   useEffect(() => {
@@ -768,6 +818,27 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
                   </div>
                 )}
               </div>
+
+              {/* Sounds */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-300">Äänet</span>
+                  <button onClick={() => setSettings(s => ({ ...s, sounds: { ...s.sounds, enabled: !s.sounds.enabled } }))}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${settings.sounds.enabled ? "bg-green-500" : "bg-gray-600"}`}>
+                    <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${settings.sounds.enabled ? "left-6" : "left-0.5"}`} />
+                  </button>
+                </div>
+                {settings.sounds.enabled && (
+                  <div className="flex gap-2">
+                    {(["normal", "funny", "intense"] as SoundPack[]).map(p => (
+                      <button key={p} onClick={() => setSettings(s => ({ ...s, sounds: { ...s.sounds, pack: p } }))}
+                        className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${settings.sounds.pack === p ? "bg-blue-600" : "bg-gray-700 hover:bg-gray-600"}`}>
+                        {p === "normal" ? "Normaali" : p === "funny" ? "Hassu" : "Intensiivi"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -946,6 +1017,21 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
         {/* Player hands */}
         <HandsStrip players={players} hands={playerHands} activeIndex={-1} />
 
+        {/* Sip counter */}
+        {settings.sipCounter.enabled && playerSips.length > 0 && (
+          <div className="mb-4 bg-gray-800/60 border border-gray-700 rounded-2xl p-3">
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Hörppy-laskuri</p>
+            <div className="flex gap-2 flex-wrap">
+              {players.map((p, i) => (
+                <div key={i} className="flex-1 min-w-0 text-center px-2 py-1 rounded-xl bg-gray-900/40">
+                  <p className="text-xs text-gray-400 truncate">{p}</p>
+                  <p className="text-xl font-black text-amber-400">{playerSips[i] ?? 0}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Action button */}
         {bussiDone ? (
           <button onClick={() => setPhase("summary")}
@@ -966,17 +1052,45 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
   // RENDER: Summary
   // ══════════════════════════════════════════════════════════════════════════
   if (phase === "summary") {
+    const ranking = players
+      .map((name, i) => ({ name, sips: playerSips[i] ?? 0, hand: playerHands[i] }))
+      .sort((a, b) => b.sips - a.sips);
+    const medals = ["🥇", "🥈", "🥉"];
+
     return (
       <div className="min-h-screen text-white p-4 max-w-md mx-auto pb-8">
         <h1 className="text-3xl font-bold text-center mb-1 pt-4">🎉 Peli ohi!</h1>
-        <p className="text-center text-gray-400 mb-8">Hyvät suoritukset kaikilta!</p>
+        <p className="text-center text-gray-400 mb-6">Hyvät suoritukset kaikilta!</p>
 
+        {/* Sip ranking */}
+        {settings.sipCounter.enabled && (
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-3 text-center">
+              Hörppy-ranking
+            </h2>
+            <div className="space-y-2">
+              {ranking.map((r, idx) => (
+                <div key={r.name}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl ${idx === 0 ? "bg-amber-900/50 border border-amber-600" : "bg-gray-800"}`}>
+                  <span className="text-2xl">{medals[idx] ?? "🍺"}</span>
+                  <span className="flex-1 font-bold text-lg">{r.name}</span>
+                  <span className={`font-black text-2xl ${idx === 0 ? "text-amber-400" : "text-gray-300"}`}>
+                    {r.sips}
+                  </span>
+                  <span className="text-xs text-gray-500">huikkaa</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Cards per player */}
         <div className="space-y-3 mb-8">
-          {players.map((p, pi) => (
-            <div key={pi} className="bg-gray-800 rounded-2xl p-4">
-              <p className="font-bold text-lg mb-2">{p}</p>
+          {ranking.map(r => (
+            <div key={r.name} className="bg-gray-800 rounded-2xl p-4">
+              <p className="font-bold text-base mb-2">{r.name}</p>
               <div className="flex gap-2 flex-wrap">
-                {playerHands[pi].map((c, ci) => (
+                {r.hand.map((c, ci) => (
                   <PlayingCard key={ci} card={c} small />
                 ))}
               </div>
