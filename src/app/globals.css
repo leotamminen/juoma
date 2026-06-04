@@ -20,11 +20,62 @@
   --footer-foreground: #d1d1d1;
 }
 
-/* Apply Colors to Everything */
+/* ── Animations ──────────────────────────────────────────────────────────── */
+
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes sparkFloat {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  10%  { opacity: 0.9; }
+  80%  { opacity: 0.4; }
+  100% { transform: translateY(-100vh) scale(0.3); opacity: 0; }
+}
+
+@keyframes float0 {
+  0%, 100% { transform: translateY(0px)  rotate(-1deg); }
+  50%       { transform: translateY(-11px) rotate(-1deg); }
+}
+@keyframes float1 {
+  0%, 100% { transform: translateY(-4px) rotate(1.5deg); }
+  50%       { transform: translateY(-14px) rotate(1.5deg); }
+}
+@keyframes float2 {
+  0%, 100% { transform: translateY(-2px) rotate(-0.5deg); }
+  50%       { transform: translateY(-13px) rotate(-0.5deg); }
+}
+@keyframes float3 {
+  0%, 100% { transform: translateY(-7px) rotate(2deg); }
+  50%       { transform: translateY(-2px) rotate(2deg); }
+}
+@keyframes float4 {
+  0%, 100% { transform: translateY(-3px) rotate(-1.5deg); }
+  50%       { transform: translateY(-15px) rotate(-1.5deg); }
+}
+
+.float-0 { animation: float0 4.5s ease-in-out infinite; }
+.float-1 { animation: float1 5.2s ease-in-out infinite; animation-delay: -1.3s; }
+.float-2 { animation: float2 4.8s ease-in-out infinite; animation-delay: -2.7s; }
+.float-3 { animation: float3 5.5s ease-in-out infinite; animation-delay: -0.8s; }
+.float-4 { animation: float4 4.2s ease-in-out infinite; animation-delay: -3.5s; }
+
+.spark {
+  background: radial-gradient(circle, rgba(255, 190, 60, 0.95), rgba(255, 100, 10, 0));
+  animation: sparkFloat linear infinite;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+
 body {
   color: var(--foreground);
-  background: var(--background);
-  transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+  background: linear-gradient(-45deg, #06060f, #0d1a2e, #170d2a, #060e1a);
+  background-size: 400% 400%;
+  animation: gradientShift 20s ease infinite;
+  min-height: 100vh;
+  transition: color 0.3s ease-in-out;
 }
 
 /* Navbar */
@@ -95,9 +146,8 @@ body {
   justify-content: center;
   min-height: 100vh;
   padding: 2rem;
-  background: var(--background);
+  background: transparent;
   color: var(--foreground);
-  transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
 /* General title styles */

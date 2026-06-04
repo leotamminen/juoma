@@ -14,13 +14,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") {
-      setDarkMode(true);
-      document.documentElement.setAttribute("data-theme", "dark");
-    } else {
-      setDarkMode(false);
-      document.documentElement.setAttribute("data-theme", "light");
-    }
+    const isDark = savedTheme !== "light"; // dark by default
+    setDarkMode(isDark);
+    document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
   }, []);
 
   const toggleDarkMode = () => {

@@ -1,19 +1,19 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="layout flex flex-col min-h-screen">
-      {/* Yläpalkki */}
-      <header className="bg-gray-800 text-white">
+      <AnimatedBackground />
+
+      <header className="bg-black/40 backdrop-blur-md text-white border-b border-white/5">
         <Navbar />
       </header>
 
-      {/* Sivun sisältö */}
       <main className="flex-grow">{children}</main>
 
-      {/* Alapalkki */}
-      <footer className="bg-gray-900 text-white">
+      <footer className="bg-black/40 backdrop-blur-md text-white border-t border-white/5">
         <Footer />
       </footer>
     </div>

@@ -542,7 +542,7 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
   // ══════════════════════════════════════════════════════════════════════════
   if (phase === "setup") {
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-4 max-w-md mx-auto pb-8">
+      <div className="min-h-screen text-white p-4 max-w-md mx-auto pb-8">
         <div className="flex items-center mb-6 pt-2">
           <button onClick={onBack} className="mr-3 text-2xl text-gray-400 hover:text-white">←</button>
           <h1 className="text-3xl font-bold">Malte</h1>
@@ -676,7 +676,7 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
     const sips = settings.sipsPerRound[currentRound - 1];
 
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-4 max-w-md mx-auto pb-8">
+      <div className="min-h-screen text-white p-4 max-w-md mx-auto pb-8">
         <ToastOverlay toast={toast} onDismiss={() => setToast(null)} />
         {showPicker && (
           <PlayerPicker players={players} excludeIndex={currentPlayerIdx} sips={sips} onPick={handleGiveSips} />
@@ -734,7 +734,7 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
     const nextSipValue = calcSips(bussiFlipIdx, settings.endgameScaling, settings.customStart);
 
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-4 max-w-md mx-auto pb-8">
+      <div className="min-h-screen text-white p-4 max-w-md mx-auto pb-8">
         <ToastOverlay toast={toast} onDismiss={() => setToast(null)} />
 
         <h1 className="text-3xl font-bold text-center mb-1 pt-2">🚌 Bussi!</h1>
@@ -823,7 +823,7 @@ const Malte = ({ players: initialPlayers, onBack }: { players: string[]; onBack:
   // ══════════════════════════════════════════════════════════════════════════
   if (phase === "summary") {
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-4 max-w-md mx-auto pb-8">
+      <div className="min-h-screen text-white p-4 max-w-md mx-auto pb-8">
         <h1 className="text-3xl font-bold text-center mb-1 pt-4">🎉 Peli ohi!</h1>
         <p className="text-center text-gray-400 mb-8">Hyvät suoritukset kaikilta!</p>
 

@@ -490,7 +490,7 @@ const Hitler = ({ players: initialPlayers, onBack }: { players: string[]; onBack
   // ── Render: Setup ──────────────────────────────────────────────────────────
   if (phase === "setup") {
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-4 max-w-md mx-auto pb-8">
+      <div className="min-h-screen text-white p-4 max-w-md mx-auto pb-8">
         <div className="flex items-center mb-6 pt-2">
           <button onClick={onBack} className="mr-3 text-2xl text-gray-400 hover:text-white">←</button>
           <h1 className="text-3xl font-bold">Hitler</h1>
@@ -544,7 +544,7 @@ const Hitler = ({ players: initialPlayers, onBack }: { players: string[]; onBack
   const cardsLeft = deck.length - cursor;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 max-w-md mx-auto pb-8">
+    <div className="min-h-screen text-white p-4 max-w-md mx-auto pb-8">
 
       {/* Toast */}
       {toast && (
