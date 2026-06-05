@@ -171,10 +171,10 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
   const typeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom on new content
+  // Scroll to bottom whenever the log, live text, or options panel changes
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [log, displayed]);
+  }, [log, displayed, uiState]);
 
   // ── deliver: thinking delay → typewriter → waiting ─────────────────────
   // Stored in a ref so game-logic callbacks always call the latest version
@@ -264,7 +264,9 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
   // ── Typewriter effect ─────────────────────────────────────────────────
   useEffect(() => {
     if (uiState !== "typing") {
-      setDisplayed("");
+      // Don't clear `displayed` here — when transitioning to "waiting" we
+      // still want the fully-typed message visible inside the live bubble.
+      // Only cancel any in-flight timer (shouldn't be one, but be safe).
       if (typeTimerRef.current) { clearInterval(typeTimerRef.current); typeTimerRef.current = null; }
       return;
     }
@@ -334,7 +336,7 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
 
   // ── Main render ────────────────────────────────────────────────────────
   return (
-    <div className="bg-[#111] font-mono text-sm flex flex-col" style={{ minHeight: "100dvh" }}>
+    <div className="bg-[#111] font-mono text-sm flex flex-col" style={{ height: "100dvh" }}>
       <StatusBar status={status} isThinking={uiState === "thinking"} />
 
       {/* Scrollable conversation log */}
@@ -354,8 +356,8 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
           </div>
         ))}
 
-        {/* Live Claude bubble (thinking or typing) */}
-        {(uiState === "thinking" || uiState === "typing") && (
+        {/* Live Claude bubble — visible during thinking, typing, AND waiting */}
+        {(uiState === "thinking" || uiState === "typing" || uiState === "waiting") && (
           <div className="flex gap-2">
             <span className="text-amber-400 shrink-0 leading-6 mt-0.5 select-none">◆</span>
             <p className="text-sm leading-relaxed text-green-300 bg-[#191919] border border-[#2a2a2a] px-3 py-2 rounded-xl max-w-[88%] min-h-[2.25rem]">
@@ -364,7 +366,7 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
               ) : (
                 <>
                   {displayed}
-                  {displayed.length < currentMsg.length && (
+                  {uiState === "typing" && displayed.length < currentMsg.length && (
                     <span className="inline-block w-1.5 h-[1.1em] bg-green-400 ml-0.5 animate-pulse align-text-bottom" />
                   )}
                 </>
@@ -376,14 +378,14 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
 
       {/* Player options */}
       {uiState === "waiting" && currentOpts.length > 0 && (
-        <div className="shrink-0 px-4 pt-2 pb-safe-6 pb-6 space-y-2 border-t border-[#1e1e1e] bg-[#0a0a0a] max-h-[45vh] overflow-y-auto">
+        <div className="shrink-0 px-4 pt-3 pb-6 space-y-2.5 border-t border-[#252525] bg-[#0d0d0d] max-h-[50vh] overflow-y-auto">
           {currentOpts.map((opt, i) => (
             <button
               key={i}
               onClick={() => handleOptionPick(opt)}
-              className="w-full text-left px-4 py-3.5 rounded-xl bg-[#181818] border border-[#2e2e2e] text-amber-300 hover:border-amber-500/60 hover:bg-[#202020] active:bg-[#282828] transition-all"
+              className="w-full text-left px-4 py-4 rounded-xl bg-[#1a1a1a] border border-[#333] border-l-2 border-l-amber-600/50 text-amber-300 hover:border-amber-500/70 hover:border-l-amber-400 hover:bg-[#222] active:bg-[#2a2a2a] transition-all text-base"
             >
-              <span className="text-gray-600 mr-2 select-none">&gt;</span>{opt}
+              <span className="text-gray-500 mr-2 select-none">&gt;</span>{opt}
             </button>
           ))}
         </div>
