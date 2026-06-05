@@ -67,6 +67,32 @@
   animation: sparkFloat linear infinite;
 }
 
+@keyframes playerHover0 {
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  50%       { transform: translateY(-6px) rotate(-1deg); }
+}
+@keyframes playerHover1 {
+  0%, 100% { transform: translateY(-3px) rotate(1.5deg); }
+  50%       { transform: translateY(-9px) rotate(1.5deg); }
+}
+@keyframes playerHover2 {
+  0%, 100% { transform: translateY(-1px) rotate(-0.5deg); }
+  50%       { transform: translateY(-7px) rotate(-0.5deg); }
+}
+@keyframes playerHover3 {
+  0%, 100% { transform: translateY(-4px) rotate(1deg); }
+  50%       { transform: translateY(-10px) rotate(1deg); }
+}
+@keyframes playerHover4 {
+  0%, 100% { transform: translateY(-2px) rotate(-1.5deg); }
+  50%       { transform: translateY(-8px) rotate(-1.5deg); }
+}
+
+@keyframes fadeInUp {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Base ────────────────────────────────────────────────────────────────── */
 
 body {
