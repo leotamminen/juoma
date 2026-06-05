@@ -7,6 +7,7 @@ import Malte from "@/components/games/Malte";
 import Hitler from "@/components/games/Hitler";
 import PullonPyoritys from "@/components/games/PullonPyoritys";
 import Placeholder from "@/components/games/Placeholder";
+import AnnaClaudenPaattaa from "@/components/games/AnnaClaudenPaattaa";
 
 const GAMES = [
   {
@@ -43,6 +44,13 @@ const GAMES = [
     emoji: "🎯",
     desc: "Satunnaiset juomatehtävät",
     component: Placeholder,
+  },
+  {
+    id: "AnnaClaudenPaattaa",
+    label: "Anna Claudenin päättää",
+    emoji: "🤖",
+    desc: "Claude Code juomapelinä",
+    component: AnnaClaudenPaattaa,
   },
 ];
 

@@ -5,6 +5,7 @@ import Malte from "@/components/games/Malte";
 import Hitler from "@/components/games/Hitler";
 import Placeholder from "@/components/games/Placeholder";
 import PullonPyoritys from "@/components/games/PullonPyoritys";
+import AnnaClaudenPaattaa from "@/components/games/AnnaClaudenPaattaa";
 
 export default function Play() {
   const [players, setPlayers] = useState<string[]>([]);
@@ -53,6 +54,8 @@ export default function Play() {
           <Placeholder players={players} onBack={goBackToSelection} />
         ) : selectedGame === "Pullon Pyöritys" ? (
           <PullonPyoritys players={players} onBack={goBackToSelection} />
+        ) : selectedGame === "Anna Claudenin päättää" ? (
+          <AnnaClaudenPaattaa players={players} onBack={goBackToSelection} />
         ) : null
       ) : gameSelection ? (
         <>
@@ -73,6 +76,7 @@ export default function Play() {
               "Hitler",
               "Placeholder",
               "Pullon Pyöritys",
+              "Anna Claudenin päättää",
             ].map((game) => (
               <button
                 key={game}
