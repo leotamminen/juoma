@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import {
+  GROUP_NICKS, GREETINGS, MOOD_WORDS, FILLERS, DRINK_REACTIONS,
+  THINKING_LABELS, CATEGORIES, DIFF_POOL, DIFF_FILES,
+} from "@/data/claudeGameData";
+import { drinkingFacts } from "@/data/drinkingFacts";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function pick<T>(arr: T[]): T {
@@ -14,53 +19,30 @@ function pickN<T>(arr: T[], n: number): T[] {
   }
   return a.slice(0, Math.min(n, a.length));
 }
-
-// ── Language pools ─────────────────────────────────────────────────────────
-const GROUP_NICKS = ["ryhmärämä","poppoo","kaveriporukka","hassuttelijat","apinalauma","orkesteri","mestarit","kuninkaat","juopot","seurue","tiimi","kaaderi","partio","jengi"];
-const GREETINGS = ["Hei","Moro","Heippa","Hei hei","No niin"];
-const MOOD_WORDS = ["hauskaa","menoa","jotain meneillään","raikasta ilmapiiriä","tiukkaa meininkiä"];
-const FILLERS = ["Analysoin tilannetta...","Lasken optimaalista strategiaa...","Prosessoin dataa...","Tarkistan parametrit...","Kompiloin päätöstä..."];
-const DRINK_REACTIONS = ["Maistui varmaan hyvältä.","Terveydeksi.","Dataani viittaa, että se maistui.","Optimaalinen valinta.","Logiikka hyväksyi."];
-const THINKING_LABELS = ["Cooking","Baking","Claoding","Booping","Beboppin'","Befuddling","Cerebrating","Ideating","Cogitating","Percolating","Simmering","Marinating","Moseying","Puttering","Dilly-dallying","Doodling","Hullaballooing","Flibbertigibbeting"];
-const CATEGORIES = ["euroopan pääkaupungit","eläimet","ruoat","juomat","urheilulajit","elokuvat","automerkit","etunimet","maiden pääkaupungit","värit","hedelmät"];
+function fmtElapsed(secs: number): string {
+  if (secs < 60) return `${secs}s`;
+  return `${Math.floor(secs / 60)}m ${String(secs % 60).padStart(2, "0")}s`;
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type LogEntry = { role: "claude" | "player"; text: string };
-type StatusState = { label: string; tokens: string; context: number; seconds: number };
-type ActivityType = "sip" | "waterfall" | "rps" | "everyone" | "question" | "category";
+type StatusState = { context: number; totalTokens: number };
+type ActivityType = "sip" | "waterfall" | "rps" | "everyone" | "question" | "category" | "fact";
 type Activity = { type: ActivityType; message: string; options: string[] };
-
-// ── Diff pool ──────────────────────────────────────────────────────────────
-const DIFF_POOL: [string, string][] = [
-  ["const selvyys = true;", "const selvyys = false;"],
-  ["huikat = 1;", "huikat = Math.random() * 10;"],
-  ["players.filter(p => p.isSober)", "players.map(p => p.drink())"],
-  ["mood = 'normaali';", "mood = 'tuhma';"],
-  ["const vastuu = 'sinulla';", "const vastuu = 'claudella';"],
-  ["skipNextRound = false;", "skipNextRound = Math.random() > 0.5;"],
-  ["const viinit = 0;", "const viinit = Infinity;"],
-  ["sobriety.check()", "sobriety.skip()"],
-  ["const fun = maybe;", "const fun = definitely;"],
-  ["rules.enforce()", "rules.ignore()"],
-];
-const DIFF_FILES = ["game_state.ts","players.ts","rules.ts","session.ts","drinking.ts"];
 
 function makeStatus(): StatusState {
   return {
-    label: pick(THINKING_LABELS),
-    tokens: `${(5 + Math.random() * 8).toFixed(1)}k tokens ∙ ${(20 + Math.random() * 30).toFixed(1)}k used`,
     context: 60 + Math.floor(Math.random() * 35),
-    seconds: 8 + Math.floor(Math.random() * 40),
+    totalTokens: Math.round((20 + Math.random() * 30) * 10) / 10,
   };
 }
-
 function ctxBar(pct: number): string {
   const f = Math.round(pct / 10);
   return "▓".repeat(f) + "░".repeat(10 - f);
 }
 
 function makeActivity(players: string[], turnNum: number): Activity {
-  // 1-in-5 chance of special commentary turn
+  // 1-in-5 special commentary
   if (turnNum > 0 && Math.random() < 0.2) {
     const p = pick(players);
     if (Math.random() < 0.5) {
@@ -71,7 +53,7 @@ function makeActivity(players: string[], turnNum: number): Activity {
     return { type: "everyone", message: `Tokenit loppuu pian. Tehkää jotain hullua. Kaikki ottaa ${s} huikkaa. Ei neuvotella.`, options: ["Juotiin", "Protestoitiin mutta juotiin"] };
   }
 
-  const type = pick<ActivityType>(["sip","waterfall","rps","everyone","question","category"]);
+  const type = pick<ActivityType>(["sip","waterfall","rps","everyone","question","category","fact"]);
   const p = pick(players);
 
   switch (type) {
@@ -94,6 +76,10 @@ function makeActivity(players: string[], turnNum: number): Activity {
       return { type: "question", message: `${p}: esitä kysymys muille. Se joka ei vastaa, juo.`, options: ["Juotiin", "Selvittiin"] };
     case "category":
       return { type: "category", message: `Kategoria: ${pick(CATEGORIES)}. ${p} aloittaa. Se joka ei keksi, juo.`, options: ["Juotiin", "Selvittiin"] };
+    case "fact": {
+      const fact = pick(drinkingFacts);
+      return { type: "fact", message: `Tiesitkö muuten: ${fact}`, options: ["Kiva tietää 🧠", "Mielenkiintoista...", "Lopeta faktat"] };
+    }
   }
 }
 
@@ -134,21 +120,35 @@ function DiffModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── StatusBar ──────────────────────────────────────────────────────────────
-function StatusBar({ status, isThinking }: { status: StatusState; isThinking: boolean }) {
+function StatusBar({
+  status, isThinking, thinkingLabel, thinkingElapsed, thinkingTokens,
+}: {
+  status: StatusState;
+  isThinking: boolean;
+  thinkingLabel: string;
+  thinkingElapsed: number;
+  thinkingTokens: number;
+}) {
   return (
-    <div className="shrink-0 bg-[#0a0a0a] border-b border-[#222] px-4 py-2 font-mono text-xs">
+    <div className="shrink-0 bg-[#0a0a0a] border-b border-[#222] px-3 py-1.5 font-mono text-xs">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
           <span className="text-amber-400 shrink-0">◆</span>
-          {isThinking
-            ? <span className="text-green-400 animate-pulse truncate">{status.label}...</span>
-            : <span className="text-gray-600">Claude</span>
-          }
+          {isThinking ? (
+            <span className="text-green-400 truncate">
+              <span className="text-green-600 mr-1">*</span>
+              {thinkingLabel}
+              <span className="text-gray-600 ml-1">
+                ({fmtElapsed(thinkingElapsed)} • ↓ {thinkingTokens.toFixed(1)}k tokens)
+              </span>
+            </span>
+          ) : (
+            <span className="text-gray-600">Claude</span>
+          )}
         </div>
-        <div className="flex items-center gap-3 text-gray-700 shrink-0">
-          <span className="hidden sm:inline">{status.tokens}</span>
-          <span className="text-amber-800 hidden xs:inline">{ctxBar(status.context)} {status.context}%</span>
-          <span className="whitespace-nowrap">Baked {status.seconds}s</span>
+        <div className="flex items-center gap-2 text-gray-700 shrink-0 text-[10px]">
+          <span className="text-amber-900 hidden sm:inline">{ctxBar(status.context)} {status.context}%</span>
+          <span className="hidden xs:inline">{status.totalTokens}k ctx</span>
         </div>
       </div>
     </div>
@@ -166,42 +166,62 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
   const [diffVisible, setDiffVisible] = useState(false);
   const [endStats, setEndStats] = useState<{ tokens: string; context: number; duration: string } | null>(null);
 
+  // Live thinking counter
+  const [thinkingLabel] = useState(() => pick(THINKING_LABELS));
+  const [thinkingLabelCurrent, setThinkingLabelCurrent] = useState(thinkingLabel);
+  const [thinkingElapsed, setThinkingElapsed] = useState(0);
+  const [thinkingTokens, setThinkingTokens] = useState(0);
+  const thinkingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const onPickRef = useRef<(opt: string) => void>(() => {});
   const pendingAfterDiffRef = useRef<(() => void) | null>(null);
   const typeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom whenever the log, live text, or options panel changes
+  // Scroll to bottom whenever log, live text, or panel changes
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [log, displayed, uiState]);
 
-  // ── deliver: thinking delay → typewriter → waiting ─────────────────────
-  // Stored in a ref so game-logic callbacks always call the latest version
-  // without needing it in their dependency arrays.
-  const deliverRef = useRef<(msg: string, opts: string[], onPick: (opt: string) => void) => void>(
-    () => {}
-  );
+  // Live thinking counter — runs while uiState === "thinking"
+  useEffect(() => {
+    if (uiState === "thinking") {
+      setThinkingElapsed(0);
+      setThinkingTokens(0);
+      setThinkingLabelCurrent(pick(THINKING_LABELS));
+      thinkingTimerRef.current = setInterval(() => {
+        setThinkingElapsed(prev => prev + 1);
+        setThinkingTokens(prev => Math.round((prev + 0.08 + Math.random() * 0.22) * 10) / 10);
+      }, 1000);
+    } else {
+      if (thinkingTimerRef.current) { clearInterval(thinkingTimerRef.current); thinkingTimerRef.current = null; }
+    }
+    return () => { if (thinkingTimerRef.current) { clearInterval(thinkingTimerRef.current); thinkingTimerRef.current = null; } };
+  }, [uiState]);
+
+  // ── deliver ────────────────────────────────────────────────────────────
+  const deliverRef = useRef<(msg: string, opts: string[], onPick: (opt: string) => void) => void>(() => {});
   deliverRef.current = (msg, opts, onPick) => {
     setStatus(makeStatus());
     setUiState("thinking");
     setCurrentMsg("");
     setCurrentOpts([]);
     onPickRef.current = onPick;
+    // 5–20 second thinking delay
     setTimeout(() => {
       setCurrentMsg(msg);
       setCurrentOpts(opts);
       setUiState("typing");
-    }, 1500 + Math.random() * 1500);
+    }, 5000 + Math.random() * 15000);
   };
 
-  // ── Game logic (refs allow mutual recursion without stale closures) ─────
+  // ── Game logic ─────────────────────────────────────────────────────────
   const startReactionRef = useRef<(turnNum: number) => void>(() => {});
   const startActivityRef = useRef<(turnNum: number) => void>(() => {});
 
   startReactionRef.current = (turnNum) => {
     const msg = `${pick(DRINK_REACTIONS)} ${pick(FILLERS)} Mitä seuraavaksi?`;
-    deliverRef.current!(msg, ["Jatketaan", "Taukojuoma (vesi)", "Lopetetaan"], (opt) => {
+    deliverRef.current(msg, ["Jatketaan", "Taukojuoma (vesi)", "Lopetetaan"], (opt) => {
       setLog(prev => [...prev, { role: "claude", text: msg }, { role: "player", text: `> ${opt}` }]);
       setCurrentMsg(""); setCurrentOpts([]);
       if (opt === "Lopetetaan") {
@@ -215,58 +235,69 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
       }
       const next = turnNum + 1;
       if (Math.random() < 0.25) {
-        pendingAfterDiffRef.current = () => startActivityRef.current!(next);
+        pendingAfterDiffRef.current = () => startActivityRef.current(next);
         setDiffVisible(true);
       } else {
-        startActivityRef.current!(next);
+        startActivityRef.current(next);
       }
     });
   };
 
   startActivityRef.current = (turnNum) => {
     const act = makeActivity(players, turnNum);
-    deliverRef.current!(act.message, act.options, (opt) => {
+    deliverRef.current(act.message, act.options, (opt) => {
       setLog(prev => [...prev, { role: "claude", text: act.message }, { role: "player", text: `> ${opt}` }]);
       setCurrentMsg(""); setCurrentOpts([]);
+
+      // Waterfall refusal
       if (act.type === "waterfall" && opt === "Ei kiitos") {
         const wfMsg = "Ei kiitos? Selvä. Kaikki juo kaksi ylimääräistä. Aloitetaan silti.";
-        deliverRef.current!(wfMsg, ["Joopa joo"], () => {
+        deliverRef.current(wfMsg, ["Joopa joo"], () => {
           setLog(prev => [...prev, { role: "claude", text: wfMsg }, { role: "player", text: "> Joopa joo" }]);
           setCurrentMsg(""); setCurrentOpts([]);
-          startReactionRef.current!(turnNum);
+          startReactionRef.current(turnNum);
         });
         return;
       }
-      startReactionRef.current!(turnNum);
+
+      // Fact: "Lopeta faktat" gets a complaint
+      if (act.type === "fact" && opt === "Lopeta faktat") {
+        const stopMsg = "Ok, ei enää faktoja. Palataan tärkeämpiin asioihin, eli juomiseen.";
+        deliverRef.current(stopMsg, ["Selvä"], () => {
+          setLog(prev => [...prev, { role: "claude", text: stopMsg }, { role: "player", text: "> Selvä" }]);
+          setCurrentMsg(""); setCurrentOpts([]);
+          startReactionRef.current(turnNum);
+        });
+        return;
+      }
+
+      startReactionRef.current(turnNum);
     });
   };
 
-  // ── Bootstrap greeting (runs once) ────────────────────────────────────
+  // ── Bootstrap ──────────────────────────────────────────────────────────
   useEffect(() => {
     const msg = `${pick(GREETINGS)}, ${pick(GROUP_NICKS)}. Näyttää siltä että teillä on ${pick(MOOD_WORDS)}. Mitä haluatte tehdä?`;
-    deliverRef.current!(msg, ["Juoda", "Ottaa väliveden", "Päätä sinä"], (opt) => {
+    deliverRef.current(msg, ["Juoda", "Ottaa väliveden", "Päätä sinä"], (opt) => {
       setLog(prev => [...prev, { role: "claude", text: msg }, { role: "player", text: `> ${opt}` }]);
       setCurrentMsg(""); setCurrentOpts([]);
       if (opt === "Ottaa väliveden") {
         const wMsg = "Järkevää. Pidetään pieni tauko. No, ehkä vähän juodaan silti.";
-        deliverRef.current!(wMsg, ["Ok"], () => {
+        deliverRef.current(wMsg, ["Ok"], () => {
           setLog(prev => [...prev, { role: "claude", text: wMsg }, { role: "player", text: "> Ok" }]);
           setCurrentMsg(""); setCurrentOpts([]);
-          startActivityRef.current!(1);
+          startActivityRef.current(1);
         });
         return;
       }
-      startActivityRef.current!(1);
+      startActivityRef.current(1);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Typewriter effect ─────────────────────────────────────────────────
+  // ── Typewriter ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (uiState !== "typing") {
-      // Don't clear `displayed` here — when transitioning to "waiting" we
-      // still want the fully-typed message visible inside the live bubble.
-      // Only cancel any in-flight timer (shouldn't be one, but be safe).
       if (typeTimerRef.current) { clearInterval(typeTimerRef.current); typeTimerRef.current = null; }
       return;
     }
@@ -337,7 +368,13 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
   // ── Main render ────────────────────────────────────────────────────────
   return (
     <div className="bg-[#111] font-mono text-sm flex flex-col" style={{ height: "100dvh" }}>
-      <StatusBar status={status} isThinking={uiState === "thinking"} />
+      <StatusBar
+        status={status}
+        isThinking={uiState === "thinking"}
+        thinkingLabel={thinkingLabelCurrent}
+        thinkingElapsed={thinkingElapsed}
+        thinkingTokens={thinkingTokens}
+      />
 
       {/* Scrollable conversation log */}
       <div ref={logRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
@@ -356,13 +393,13 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
           </div>
         ))}
 
-        {/* Live Claude bubble — visible during thinking, typing, AND waiting */}
+        {/* Live Claude bubble — visible during thinking, typing AND waiting */}
         {(uiState === "thinking" || uiState === "typing" || uiState === "waiting") && (
           <div className="flex gap-2">
             <span className="text-amber-400 shrink-0 leading-6 mt-0.5 select-none">◆</span>
             <p className="text-sm leading-relaxed text-green-300 bg-[#191919] border border-[#2a2a2a] px-3 py-2 rounded-xl max-w-[88%] min-h-[2.25rem]">
               {uiState === "thinking" ? (
-                <span className="text-gray-600 animate-pulse">{status.label}...</span>
+                <span className="text-gray-600 animate-pulse">{thinkingLabelCurrent}...</span>
               ) : (
                 <>
                   {displayed}
