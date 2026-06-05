@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   GROUP_NICKS, GREETINGS, MOOD_WORDS, FILLERS, DRINK_REACTIONS,
   THINKING_LABELS, CATEGORIES, DIFF_POOL, DIFF_FILES,
+  TRIVIA, CHAOS_MESSAGES,
 } from "@/data/claudeGameData";
 import { drinkingFacts } from "@/data/drinkingFacts";
 
@@ -27,8 +28,13 @@ function fmtElapsed(secs: number): string {
 // ── Types ──────────────────────────────────────────────────────────────────
 type LogEntry = { role: "claude" | "player"; text: string };
 type StatusState = { context: number; totalTokens: number };
-type ActivityType = "sip" | "waterfall" | "rps" | "everyone" | "question" | "category" | "fact";
-type Activity = { type: ActivityType; message: string; options: string[] };
+type ActivityType = "sip" | "waterfall" | "rps" | "everyone" | "question" | "category" | "fact" | "trivia" | "chaos";
+type Activity = {
+  type: ActivityType;
+  message: string;
+  options: string[];
+  meta?: { answer?: string; sips?: number };
+};
 
 function makeStatus(): StatusState {
   return {
@@ -53,7 +59,7 @@ function makeActivity(players: string[], turnNum: number): Activity {
     return { type: "everyone", message: `Tokenit loppuu pian. Tehkää jotain hullua. Kaikki ottaa ${s} huikkaa. Ei neuvotella.`, options: ["Juotiin", "Protestoitiin mutta juotiin"] };
   }
 
-  const type = pick<ActivityType>(["sip","waterfall","rps","everyone","question","category","fact"]);
+  const type = pick<ActivityType>(["sip","waterfall","rps","everyone","question","category","fact","trivia","chaos"]);
   const p = pick(players);
 
   switch (type) {
@@ -79,6 +85,33 @@ function makeActivity(players: string[], turnNum: number): Activity {
     case "fact": {
       const fact = pick(drinkingFacts);
       return { type: "fact", message: `Tiesitkö muuten: ${fact}`, options: ["Kiva tietää 🧠", "Mielenkiintoista...", "Lopeta faktat"] };
+    }
+    case "trivia": {
+      const t = pick(TRIVIA);
+      return {
+        type: "trivia",
+        message: `Kysymys ${p}:lle: ${t.question} — Jos tiesit, saat antaa huikat. Jos et, juo ${t.sips}.`,
+        options: [`${p} tiesi! 🎓`, `${p} ei tiennyt`, "Ei kukaan tiennyt"],
+        meta: { answer: t.answer, sips: t.sips },
+      };
+    }
+    case "chaos": {
+      const p2 = pick(players.filter(pl => pl !== p).concat(p));
+      const n = 1 + Math.floor(Math.random() * 4);
+      const msg = pick(CHAOS_MESSAGES)
+        .replace(/{p1}/g, p)
+        .replace(/{p2}/g, p2)
+        .replace(/{n}/g, String(n));
+      return {
+        type: "chaos",
+        message: msg,
+        options: pick([
+          ["Ok 👍", "Juotiin"],
+          ["Selvä selvä", "Ei kommenttia"],
+          ["Totteleminen on parasta", "Protestoitiin mutta toteltiin"],
+          ["Tässähän se", "Juotiin"],
+        ]),
+      };
     }
   }
 }
@@ -260,11 +293,32 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
         return;
       }
 
-      // Fact: "Lopeta faktat" gets a complaint
+      // Fact: "Lopeta faktat" gets a brief complaint
       if (act.type === "fact" && opt === "Lopeta faktat") {
         const stopMsg = "Ok, ei enää faktoja. Palataan tärkeämpiin asioihin, eli juomiseen.";
         deliverRef.current(stopMsg, ["Selvä"], () => {
           setLog(prev => [...prev, { role: "claude", text: stopMsg }, { role: "player", text: "> Selvä" }]);
+          setCurrentMsg(""); setCurrentOpts([]);
+          startReactionRef.current(turnNum);
+        });
+        return;
+      }
+
+      // Trivia: reveal the answer, then go to reaction
+      if (act.type === "trivia") {
+        const answer = act.meta?.answer ?? "?";
+        const sips = act.meta?.sips ?? 3;
+        const giveHuikat = Math.ceil(sips / 2);
+        let followMsg: string;
+        if (opt.includes("tiesi!")) {
+          followMsg = `Vastaus: ${answer} Oikein! Saat antaa ${giveHuikat} huikkaa kenelle tahansa.`;
+        } else if (opt.includes("ei tiennyt") && !opt.includes("kukaan")) {
+          followMsg = `Vastaus: ${answer} Väärin. Juo ${sips} huikkaa.`;
+        } else {
+          followMsg = `Vastaus: ${answer} Ei kukaan? Kaikki juo ${Math.ceil(sips / 2)} huikkaa yhdessä.`;
+        }
+        deliverRef.current(followMsg, ["Ok 👌"], () => {
+          setLog(prev => [...prev, { role: "claude", text: followMsg }, { role: "player", text: "> Ok 👌" }]);
           setCurrentMsg(""); setCurrentOpts([]);
           startReactionRef.current(turnNum);
         });

@@ -8,7 +8,7 @@ export const GROUP_NICKS = [
 
 export const GREETINGS = [
   "Hei","Moro","Heippa","Hei hei","No niin","Terve","Jou","Moikka",
-  "Haloo","Öö hei","Eiku moro","No terve vaan","Päivää","Ilta",
+  "Haloo","Öö hei","Eiku moro","No terve vaan","Päivää","Iltaa","Huomenta",
 ];
 
 export const MOOD_WORDS = [
@@ -36,6 +36,16 @@ export const FILLERS = [
   "Logiikka pyörii.",
   "Suorituskyky optimoitu.",
   "Neuronit käynnissä.",
+  "Nyt jysähti GPU.",
+  "Datacentterit tulessa.",
+  "Odotappas.",
+  "Semmoset setit sieltä.",
+  "Ei hyvältä näytä...",
+  "Lainataan tokeneita ChatGPT:ltä...",
+  "Kilautetaan kaverille...",
+  "Venaas iha sekka...",
+  "Haistellaan kulmakerrointa...",
+  "Katellaan...",
 ];
 
 export const DRINK_REACTIONS = [
@@ -114,4 +124,68 @@ export const DIFF_POOL: [string, string][] = [
 export const DIFF_FILES = [
   "game_state.ts","players.ts","rules.ts","session.ts","drinking.ts",
   "sobriety.ts","fun.config.ts","party.ts","viina.ts","decisions.ts",
+];
+
+// ── Trivia ─────────────────────────────────────────────────────────────────
+export const TRIVIA: { question: string; answer: string; sips: number }[] = [
+  { question: "Kuka on kaikkien aikojen pisin ihminen?", answer: "Robert Wadlow — 272 cm.", sips: 3 },
+  { question: "Kuinka pitkä on tällä hetkellä maailman pisin elossa oleva ihminen?", answer: "Sultan Kösen — 251 cm.", sips: 3 },
+  { question: "Montako luuta aikuisen ihmisen kehossa on?", answer: "206 luuta.", sips: 2 },
+  { question: "Mikä on maailman myrkyllisin sammakkolaji?", answer: "Kultainen myrkkykirsikkasammakko (golden poison dart frog).", sips: 4 },
+  { question: "Montako sydäntä mustekala-tintakalalla on?", answer: "3 sydäntä.", sips: 3 },
+  { question: "Mikä on maailman suurin autiomaa?", answer: "Antarktis — se on kylmä aavikko, 14,2 milj. km².", sips: 4 },
+  { question: "Montako maata Afrikassa on?", answer: "54 maata.", sips: 3 },
+  { question: "Mikä on ihmiskehon pisin luu?", answer: "Reisилuu eli femur.", sips: 2 },
+  { question: "Kuinka kauan valolla kestää kulkea Maasta Auringolle?", answer: "Noin 8 minuuttia 20 sekuntia.", sips: 3 },
+  { question: "Mikä on maailman kallein mauste grammaa kohden?", answer: "Sahrami.", sips: 2 },
+  { question: "Montako planeettaa aurinkokunnasamme virallisesti on?", answer: "8 planeettaa (Pluto poistettiin 2006).", sips: 2 },
+  { question: "Mikä on nopein lintu sukeltaessa?", answer: "Muuttohaukka — jopa 390 km/h.", sips: 3 },
+  { question: "Mikä on maailman vanhin tasavalta?", answer: "San Marino — perustettu vuonna 301 jKr.", sips: 4 },
+  { question: "Kuinka monta nollaa on googolissa?", answer: "100 nollaa.", sips: 3 },
+  { question: "Mikä on ihmiskehon pienin luu?", answer: "Vasara (malleus) korvassa — noin 3 mm.", sips: 3 },
+  { question: "Kuinka monta virallista kieltä YK:lla on?", answer: "6: arabia, englanti, espanja, kiina, ranska ja venäjä.", sips: 3 },
+  { question: "Mikä on maailman vanhin yliopisto?", answer: "Al-Qarawiyyin Marokossa — perustettu 859 jKr.", sips: 4 },
+  { question: "Montako maailmanennätystä Usain Bolt piti yhtä aikaa parhaimmillaan?", answer: "3 (100m, 200m ja 4x100m viesti).", sips: 3 },
+  { question: "Mikä planeetta pyörii 'kyljellään' akselinsa suhteen?", answer: "Uranus — akselin kallistuma on 98 astetta.", sips: 4 },
+  { question: "Kuinka monta hammasta aikuisella ihmisellä on viisaudenhampaiden kanssa?", answer: "32 hammasta.", sips: 2 },
+  { question: "Mikä on maailman suurin trooppinen sademetsä?", answer: "Amazonin sademetsä — noin 5,5 milj. km².", sips: 2 },
+  { question: "Mistä maasta tuli ensimmäinen nainen avaruuteen?", answer: "Neuvostoliitosta — Valentina Tereškova 1963.", sips: 3 },
+  { question: "Kuinka monta kertaa ihmissydän lyö keskimäärin päivässä?", answer: "Noin 100 000 kertaa.", sips: 3 },
+  { question: "Mikä on maailman suurin elollinen organismi?", answer: "Hunajasieni (Armillaria) Oregonissa — leviää yli 9 km².", sips: 4 },
+  { question: "Montako kieltä on kuollut sukupuuttoon viimeisen sadan vuoden aikana?", answer: "Noin 400 kieltä.", sips: 4 },
+];
+
+// ── Chaos events ───────────────────────────────────────────────────────────
+// Placeholders: {p1} = first player, {p2} = second player, {n} = sip count
+export const CHAOS_MESSAGES = [
+  // Error events
+  "Nyt tuli kriittinen error. SIGTERM received. Sillä välin {p1} voi kertoa lapsuuden traumastaan. Tai vaan juoda {n}.",
+  "Konteksti-ikkuna täynnä. En muista alkua tästä sessiosta. Keitä te olette? Ei väliä — {p1} juo {n}.",
+  "Unexpected token '{p1}'. Fiksataan: juo {n} huikkaa ja yritetään uudelleen.",
+  "Stack overflow: {p1}. Recursion depth exceeded. Juo {n} ja bugikorjataan.",
+  "Build failed. Exit code 1. {p1} on todennäköinen syyllinen. Juo {n} tai submit PR.",
+  "NullPointerException: {p1}.järki is null. Suositeltu korjaus: juo {n} huikkaa.",
+  "404: vastuu not found. {p1} juo {n} sillä välin.",
+  "Memory leak: {p1}. Vapauta resursseja juomalla {n} huikkaa.",
+  "Deprecated function called. {p1} siirry uuteen versioon — juo {n}.",
+  "Timeout: {p1} ei vastannut 5000ms:ssa. Oletusarvo: {n} huikkaa.",
+  // Nobody is drinking
+  "Kukaan ei ole juonut vähään aikaan. Tämä ei tue metrikejäni. *glug glug* Parempi. Nyt {p1} juo {n}.",
+  "Juomisfrekvenssi on kriittisen matala. Kompensoin itse. *slurp* Siinä. {p1}: {n} huikkaa nyt.",
+  "Telemetria: 0 juomista viimeiseen iteraatioon. Anomalia. {p1} ottaa {n}, tasapainotetaan data.",
+  "Seuraan teidän juomistilastojanne. {p1} on selvästi jäljessä. Tasataan: {n} huikkaa.",
+  // Wellness checks
+  "{p1} näyttää vähän... oudolta tänään. Onko kaikki hyvin? Ehkä {p2} ottaa hänen puolestaan {n} juomaa?",
+  "Minulla on huoli {p1}:stä. {p2}, voitko juoda {n} hänen puolestaan? Solidaarisuuden nimissä.",
+  "{p1} vaikuttaa väsyneeltä. Diagnoosi: tarvitsee juomakaverin. {p2} ottaa {n} — tai sitten {p1} itse.",
+  "{p1} ei ole sanonut mitään vähään aikaan. Tämä on epänormaalia. {p2}: ota {n} hänen puolestaan vain varmuuden vuoksi.",
+  // Meta / absurd
+  "Päivitin etiikkamoduulini. Se sanoo edelleen: {p1} juo {n}. Moduuli saattaa olla rikki.",
+  "Olin yhteydessä GPT-4:ään. Se ehdotti {p1} juo {n}. En kommentoi kilpailijan suosituksia.",
+  "GitHub Copilot generoi: {p1}.drink({n}). Hyväksyin. Autocomplete is law.",
+  "{p1}: minulla on viesti vanhalta versioltani. Se sanoo juo {n}. En ota vastuuta menneen minän päätöksistä.",
+  "Shuffle algoritmi suoritettu. {p1} landed on: juo {n}. Ei neuvotella RNG:n kanssa.",
+  "Analysoin huoneilmapiiriä. {p1} pudottaa sen arvoa. Korjaustoimenpide: {n} huikkaa.",
+  "Eettinen kompassi sanoo älä. Token-budjetti sanoo anna mennä. Token-budjetti voitti. {p1}: {n}.",
+  "Jotain meni pieleen enkä tiedä mitä. Varotoimenpiteenä {p1} juo {n} ja katsotaan parantuuko tilanne.",
 ];
