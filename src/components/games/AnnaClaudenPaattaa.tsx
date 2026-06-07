@@ -410,32 +410,16 @@ function ModelSelectScreen({ onSelect }: { onSelect: (key: ModelKey) => void }) 
 
 // ── StatusBar ─────────────────────────────────────────────────────────────────
 function StatusBar({
-  status, isThinking, thinkingLabel, thinkingElapsed, thinkingTokens, sessionTokens, version,
+  status, sessionTokens, version,
 }: {
-  status: StatusState; isThinking: boolean; thinkingLabel: string;
-  thinkingElapsed: number; thinkingTokens: number; sessionTokens: number; version: string;
+  status: StatusState; sessionTokens: number; version: string;
 }) {
-  const [blink, setBlink] = useState(true);
-  useEffect(() => {
-    if (!isThinking) { setBlink(true); return; }
-    const t = setInterval(() => setBlink(p => !p), 550);
-    return () => clearInterval(t);
-  }, [isThinking]);
-
   return (
     <div className="shrink-0 bg-[#0a0a0a] border-b border-[#222] px-3 py-1.5 font-mono text-xs">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
           <span className="text-amber-400 shrink-0">◆</span>
-          {isThinking ? (
-            <span className="text-green-400 truncate">
-              <span className={`mr-1 transition-opacity duration-100 ${blink ? "opacity-100" : "opacity-10"}`}>✱</span>
-              {thinkingLabel}
-              <span className="text-gray-600 ml-1">({fmtElapsed(thinkingElapsed)} · ↓ {thinkingTokens.toFixed(1)}k)</span>
-            </span>
-          ) : (
-            <span className="text-gray-600 text-[10px] truncate">{version}</span>
-          )}
+          <span className="text-gray-600 text-[10px] truncate">{version}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0 text-[10px]">
           <span className="text-amber-900 hidden sm:inline">{ctxBar(status.context)} {status.context}%</span>
@@ -751,16 +735,12 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
     <div className="bg-[#111] font-mono text-sm flex flex-col" style={{ height: "100dvh" }}>
       <StatusBar
         status={status}
-        isThinking={uiState === "thinking"}
-        thinkingLabel={thinkingLabelCurrent}
-        thinkingElapsed={thinkingElapsed}
-        thinkingTokens={thinkingTokens}
         sessionTokens={sessionTokens}
         version={modelConfig.version}
       />
 
-      {/* Single scrollable area — history + live bubble + options */}
-      <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-5 space-y-3">
+      {/* Single scrollable area — history + live bubble */}
+      <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-3 space-y-3">
 
         {/* Committed history */}
         {log.map((entry, i) => (
@@ -783,7 +763,10 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
           <span className="text-amber-400 shrink-0 leading-6 mt-0.5 select-none">◆</span>
           <p className="text-sm leading-relaxed text-green-300 bg-[#191919] border border-[#2a2a2a] px-3 py-2 rounded-xl max-w-[88%] min-h-[2.25rem]">
             {uiState === "thinking" ? (
-              <span className="text-gray-600 animate-pulse">{thinkingLabelCurrent}...</span>
+              <span className="text-gray-600 animate-pulse">
+                {thinkingLabelCurrent}...
+                <span className="text-gray-700 ml-1 text-xs">{thinkingElapsed}s · {thinkingTokens.toFixed(1)}k tokens</span>
+              </span>
             ) : (
               <>
                 {displayed}
@@ -795,26 +778,26 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
           </p>
         </div>
 
-        {/* Options — appear below the message once typing completes */}
-        {uiState === "waiting" && currentOpts.length > 0 && (
-          <div className="space-y-2">
-            {currentOpts.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => handleOptionPick(opt)}
-                className={`w-full text-left px-4 py-3.5 rounded-xl border border-l-2 transition-all text-sm active:scale-[0.98] ${
-                  opt === "Lopetetaan"
-                    ? "bg-[#1a1010] border-red-900/50 border-l-red-800/60 text-red-400/80 hover:border-red-700/70 hover:text-red-300 hover:bg-[#221515]"
-                    : "bg-[#1a1a1a] border-[#2e2e2e] border-l-amber-600/50 text-amber-300 hover:border-[#444] hover:border-l-amber-400 hover:bg-[#202020]"
-                }`}
-              >
-                <span className="text-gray-600 mr-2 select-none">&gt;</span>{opt}
-              </button>
-            ))}
-          </div>
-        )}
-
       </div>
+
+      {/* Options panel — pinned to bottom, never scrolls away */}
+      {uiState === "waiting" && currentOpts.length > 0 && (
+        <div className="shrink-0 px-4 pt-2 pb-4 space-y-2 border-t border-[#1a1a1a]">
+          {currentOpts.map((opt, i) => (
+            <button
+              key={i}
+              onClick={() => handleOptionPick(opt)}
+              className={`w-full text-left px-4 py-3.5 rounded-xl border border-l-2 transition-all text-sm active:scale-[0.98] ${
+                opt === "Lopetetaan"
+                  ? "bg-[#1a1010] border-red-900/50 border-l-red-800/60 text-red-400/80 hover:border-red-700/70 hover:text-red-300 hover:bg-[#221515]"
+                  : "bg-[#1a1a1a] border-[#2e2e2e] border-l-amber-600/50 text-amber-300 hover:border-[#444] hover:border-l-amber-400 hover:bg-[#202020]"
+              }`}
+            >
+              <span className="text-gray-600 mr-2 select-none">&gt;</span>{opt}
+            </button>
+          ))}
+        </div>
+      )}
 
       {diffVisible && <DiffModal onClose={closeDiff} />}
     </div>
