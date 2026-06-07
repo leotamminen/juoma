@@ -8,7 +8,106 @@ import {
 } from "@/data/claudeGameData";
 import { drinkingFacts } from "@/data/drinkingFacts";
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Model configs ───────────────────────────────────────────────────────────
+interface ModelConfig {
+  label: string;
+  version: string;
+  tagline: string;
+  description: string;
+  thinkingMin: number;
+  thinkingRange: number;
+  firstMin: number;
+  firstRange: number;
+  typewriterMs: number;
+  tokenMin: number;
+  tokenRange: number;
+  sipMult: number;
+  preambles: string[];
+}
+
+const MODEL_CONFIGS: Record<string, ModelConfig> = {
+  haiku: {
+    label: "Haiku 4.5",
+    version: "Claude Code v2.1.161 · Haiku 4.5",
+    tagline: ">> fast mode",
+    description: "Nopea ja kevyt. Ei turhia viivytyksiä.",
+    thinkingMin: 800,  thinkingRange: 2200,
+    firstMin: 600,     firstRange: 600,
+    typewriterMs: 12,
+    tokenMin: 0.25, tokenRange: 0.30,
+    sipMult: 0.8,
+    preambles: [],
+  },
+  sonnet: {
+    label: "Sonnet 4.6",
+    version: "Claude Code v2.1.161 · Sonnet 4.6",
+    tagline: ">> recommended",
+    description: "Tasapainoinen. Toimii juomapeleissä.",
+    thinkingMin: 4000, thinkingRange: 11000,
+    firstMin: 1500,    firstRange: 1000,
+    typewriterMs: 22,
+    tokenMin: 0.08, tokenRange: 0.22,
+    sipMult: 1.0,
+    preambles: [],
+  },
+  opus: {
+    label: "Opus 4.8",
+    version: "Claude Code v2.1.161 · Opus 4.8",
+    tagline: ">> powerful",
+    description: "Hidas ja perusteellinen. Juo odotellessa.",
+    thinkingMin: 8000, thinkingRange: 17000,
+    firstMin: 3000,    firstRange: 2000,
+    typewriterMs: 35,
+    tokenMin: 0.05, tokenRange: 0.12,
+    sipMult: 1.3,
+    preambles: [
+      "Analysoituani tilannetta syvällisesti — ",
+      "Pitkän harkinnan jälkeen: ",
+      "Kontekstin perusteella... ",
+      "Monipuolisen arvioinnin tuloksena: ",
+    ],
+  },
+  extended: {
+    label: "Extended Thinking",
+    version: "Claude Code v2.1.161 · Ext. Thinking",
+    tagline: ">> experimental",
+    description: "Miettii todella pitkään. Tulokset epäselviä.",
+    thinkingMin: 12000, thinkingRange: 18000,
+    firstMin: 5000,     firstRange: 3000,
+    typewriterMs: 45,
+    tokenMin: 0.03, tokenRange: 0.09,
+    sipMult: 1.6,
+    preambles: [
+      "Harkittuani 64 lähestymistapaa... ",
+      "Ajattelubudjetti käytetty. Lopputulos: ",
+      "Pitkän sisäisen monologin jälkeen — ",
+      "Olen laskenut kaikki mahdolliset vaihtoehdot. Tässä: ",
+    ],
+  },
+  brutal: {
+    label: "Brutal 1.0",
+    version: "Claude Code v0.0.1 · Brutal 1.0",
+    tagline: ">> unstable",
+    description: "Ei empatiaa. Ei neuvottelua. Vain huikat.",
+    thinkingMin: 600,  thinkingRange: 1900,
+    firstMin: 300,     firstRange: 500,
+    typewriterMs: 8,
+    tokenMin: 0.35, tokenRange: 0.45,
+    sipMult: 2.0,
+    preambles: [
+      "Juo. ",
+      "Kuule. ",
+      "Nyt. ",
+      "Ei neuvottelua. ",
+      "Tehdään näin: ",
+      "Ilman kysymyksiä: ",
+    ],
+  },
+};
+
+type ModelKey = keyof typeof MODEL_CONFIGS;
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -24,10 +123,15 @@ function fmtElapsed(secs: number): string {
   if (secs < 60) return `${secs}s`;
   return `${Math.floor(secs / 60)}m ${String(secs % 60).padStart(2, "0")}s`;
 }
+function fmtTokens(n: number): string {
+  const k = Math.floor(n / 1000);
+  const r = String(n % 1000).padStart(3, "0");
+  return `${k},${r}`;
+}
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 type LogEntry = { role: "claude" | "player"; text: string };
-type StatusState = { context: number; totalTokens: number };
+type StatusState = { context: number };
 type ActivityType = "sip" | "waterfall" | "rps" | "everyone" | "question" | "category" | "fact" | "trivia" | "chaos";
 type Activity = {
   type: ActivityType;
@@ -37,25 +141,23 @@ type Activity = {
 };
 
 function makeStatus(): StatusState {
-  return {
-    context: 60 + Math.floor(Math.random() * 35),
-    totalTokens: Math.round((20 + Math.random() * 30) * 10) / 10,
-  };
+  return { context: 60 + Math.floor(Math.random() * 35) };
 }
 function ctxBar(pct: number): string {
   const f = Math.round(pct / 10);
   return "▓".repeat(f) + "░".repeat(10 - f);
 }
 
-function makeActivity(players: string[], turnNum: number): Activity {
-  // 1-in-5 special commentary
+function makeActivity(players: string[], turnNum: number, sipMult = 1.0): Activity {
+  const sip = (n: number) => Math.max(1, Math.round(n * sipMult));
+
   if (turnNum > 0 && Math.random() < 0.2) {
     const p = pick(players);
     if (Math.random() < 0.5) {
-      const s = 2 + Math.floor(Math.random() * 3);
+      const s = sip(2 + Math.floor(Math.random() * 3));
       return { type: "sip", message: `Huomaan että ${p} on ollut hiljaa. Korjataan se. ${p} juo ${s} huikkaa.`, options: ["Juotiin", "Protestoitiin mutta juotiin"] };
     }
-    const s = 3 + Math.floor(Math.random() * 4);
+    const s = sip(3 + Math.floor(Math.random() * 4));
     return { type: "everyone", message: `Tokenit loppuu pian. Tehkää jotain hullua. Kaikki ottaa ${s} huikkaa. Ei neuvotella.`, options: ["Juotiin", "Protestoitiin mutta juotiin"] };
   }
 
@@ -64,18 +166,18 @@ function makeActivity(players: string[], turnNum: number): Activity {
 
   switch (type) {
     case "sip": {
-      const n = 2 + Math.floor(Math.random() * 5);
+      const n = sip(2 + Math.floor(Math.random() * 5));
       return { type: "sip", message: `Okei. ${p} saa jakaa ${n} huikkaa kenelle tahansa. Tai ottaa ne itse, jos siltä tuntuu.`, options: [...players, "Itse"] };
     }
     case "waterfall":
       return { type: "waterfall", message: `Vesiputous. ${p} aloittaa, juodaan kunnes aloittaja lopettaa.`, options: ["Aloitetaan", "Ei kiitos"] };
     case "rps": {
       const two = players.length >= 2 ? pickN(players, 2) : [players[0], players[0]];
-      const n = 1 + Math.floor(Math.random() * 4);
+      const n = sip(1 + Math.floor(Math.random() * 4));
       return { type: "rps", message: `${two[0]} ja ${two[1]}: kivi paperi sakset. Häviäjä juo ${n} huikkaa.`, options: [`Pelattiin, ${two[0]} hävisi`, `Pelattiin, ${two[1]} hävisi`, "Tasapeli"] };
     }
     case "everyone": {
-      const n = 1 + Math.floor(Math.random() * 4);
+      const n = sip(1 + Math.floor(Math.random() * 4));
       return { type: "everyone", message: `Kaikki ottaa ${n} huikkaa. Ei neuvotella.`, options: ["Juotiin", "Protestoitiin mutta juotiin"] };
     }
     case "question":
@@ -88,16 +190,17 @@ function makeActivity(players: string[], turnNum: number): Activity {
     }
     case "trivia": {
       const t = pick(TRIVIA);
+      const ts = sip(t.sips);
       return {
         type: "trivia",
-        message: `Kysymys ${p}:lle: ${t.question} — Jos tiesit, saat antaa huikat. Jos et, juo ${t.sips}.`,
+        message: `Kysymys ${p}:lle: ${t.question} — Jos tiesit, saat antaa huikat. Jos et, juo ${ts}.`,
         options: [`${p} tiesi! 🎓`, `${p} ei tiennyt`, "Ei kukaan tiennyt"],
-        meta: { answer: t.answer, sips: t.sips },
+        meta: { answer: t.answer, sips: ts },
       };
     }
     case "chaos": {
       const p2 = pick(players.filter(pl => pl !== p).concat(p));
-      const n = 1 + Math.floor(Math.random() * 4);
+      const n = sip(1 + Math.floor(Math.random() * 4));
       const msg = pick(CHAOS_MESSAGES)
         .replace(/{p1}/g, p)
         .replace(/{p2}/g, p2)
@@ -110,13 +213,13 @@ function makeActivity(players: string[], turnNum: number): Activity {
           ["Selvä selvä", "Ei kommenttia"],
           ["Totteleminen on parasta", "Protestoitiin mutta toteltiin"],
           ["Tässähän se", "Juotiin"],
-        ]),
+        ] as string[][]),
       };
     }
   }
 }
 
-// ── DiffModal ──────────────────────────────────────────────────────────────
+// ── DiffModal ────────────────────────────────────────────────────────────────
 function DiffModal({ onClose }: { onClose: () => void }) {
   const [pairs] = useState(() => pickN(DIFF_POOL, 2 + Math.floor(Math.random() * 2)));
   const [file] = useState(() => pick(DIFF_FILES));
@@ -152,16 +255,83 @@ function DiffModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── StatusBar ──────────────────────────────────────────────────────────────
+// ── AsciiMascot ──────────────────────────────────────────────────────────────
+function AsciiMascot({ className = "" }: { className?: string }) {
+  return (
+    <pre className={`font-mono text-amber-400 text-xs leading-snug select-none ${className}`}>{
+`  ┌──────┐
+  │ ◆  ◆ │
+  │  ‿‿  │
+  └──┬───┘
+     │`
+    }</pre>
+  );
+}
+
+// ── ModelSelectScreen ────────────────────────────────────────────────────────
+function ModelSelectScreen({ onSelect }: { onSelect: (key: ModelKey) => void }) {
+  const models = Object.entries(MODEL_CONFIGS) as [ModelKey, ModelConfig][];
+
+  return (
+    <div className="min-h-screen bg-[#111] font-mono text-sm flex flex-col items-center justify-center px-4 py-8">
+      <div className="w-full max-w-sm space-y-5">
+        <div className="text-center">
+          <AsciiMascot className="inline-block" />
+          <div className="mt-3">
+            <h1 className="text-amber-400 font-bold text-lg">Anna Claudenin päättää</h1>
+            <p className="text-gray-600 text-xs mt-1">Valitse malli ennen kuin aloitat</p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {models.map(([key, cfg]) => (
+            <button
+              key={key}
+              onClick={() => onSelect(key)}
+              className={`w-full text-left px-4 py-3.5 rounded-xl border transition-all active:scale-[0.98] ${
+                key === "sonnet"
+                  ? "border-amber-500/60 bg-[#1a1a0a] hover:border-amber-400 hover:bg-[#22210d]"
+                  : key === "brutal"
+                  ? "border-red-900/60 bg-[#1a0a0a] hover:border-red-700/80 hover:bg-[#221010]"
+                  : "border-[#2a2a2a] bg-[#161616] hover:border-[#444] hover:bg-[#1e1e1e]"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-0.5">
+                <span className={`font-bold text-sm ${
+                  key === "brutal" ? "text-red-400" : key === "sonnet" ? "text-amber-300" : "text-green-300"
+                }`}>{cfg.label}</span>
+                <span className={`text-[10px] ${
+                  key === "sonnet" ? "text-amber-600" : key === "brutal" ? "text-red-700" : "text-gray-600"
+                }`}>{cfg.tagline}</span>
+              </div>
+              <p className="text-gray-500 text-xs">{cfg.description}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── StatusBar ────────────────────────────────────────────────────────────────
 function StatusBar({
-  status, isThinking, thinkingLabel, thinkingElapsed, thinkingTokens,
+  status, isThinking, thinkingLabel, thinkingElapsed, thinkingTokens, sessionTokens, version,
 }: {
   status: StatusState;
   isThinking: boolean;
   thinkingLabel: string;
   thinkingElapsed: number;
   thinkingTokens: number;
+  sessionTokens: number;
+  version: string;
 }) {
+  const [blink, setBlink] = useState(true);
+  useEffect(() => {
+    if (!isThinking) { setBlink(true); return; }
+    const t = setInterval(() => setBlink(p => !p), 550);
+    return () => clearInterval(t);
+  }, [isThinking]);
+
   return (
     <div className="shrink-0 bg-[#0a0a0a] border-b border-[#222] px-3 py-1.5 font-mono text-xs">
       <div className="flex items-center justify-between gap-2">
@@ -169,27 +339,28 @@ function StatusBar({
           <span className="text-amber-400 shrink-0">◆</span>
           {isThinking ? (
             <span className="text-green-400 truncate">
-              <span className="text-green-600 mr-1">*</span>
+              <span className={`mr-1 transition-opacity duration-100 ${blink ? "opacity-100" : "opacity-10"}`}>✱</span>
               {thinkingLabel}
               <span className="text-gray-600 ml-1">
-                ({fmtElapsed(thinkingElapsed)} • ↓ {thinkingTokens.toFixed(1)}k tokens)
+                ({fmtElapsed(thinkingElapsed)} · ↓ {thinkingTokens.toFixed(1)}k)
               </span>
             </span>
           ) : (
-            <span className="text-gray-600">Claude</span>
+            <span className="text-gray-600 text-[10px] truncate">{version}</span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-gray-700 shrink-0 text-[10px]">
+        <div className="flex items-center gap-2 shrink-0 text-[10px]">
           <span className="text-amber-900 hidden sm:inline">{ctxBar(status.context)} {status.context}%</span>
-          <span className="hidden xs:inline">{status.totalTokens}k ctx</span>
+          <span className="text-gray-600">{(sessionTokens / 1000).toFixed(1)}k</span>
         </div>
       </div>
     </div>
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────
+// ── Main component ───────────────────────────────────────────────────────────
 export default function AnnaClaudenPaattaa({ players, onBack }: { players: string[]; onBack: () => void }) {
+  const [selectedModel, setSelectedModel] = useState<ModelKey | null>(null);
   const [status, setStatus] = useState<StatusState>(makeStatus);
   const [uiState, setUiState] = useState<"thinking" | "typing" | "waiting" | "end">("thinking");
   const [currentMsg, setCurrentMsg] = useState("");
@@ -199,56 +370,79 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
   const [diffVisible, setDiffVisible] = useState(false);
   const [endStats, setEndStats] = useState<{ tokens: string; context: number; duration: string } | null>(null);
 
-  // Live thinking counter
-  const [thinkingLabel] = useState(() => pick(THINKING_LABELS));
-  const [thinkingLabelCurrent, setThinkingLabelCurrent] = useState(thinkingLabel);
+  const [sessionTokens, setSessionTokens] = useState(() => 5000 + Math.floor(Math.random() * 10000));
+  const sessionTokensRef = useRef(sessionTokens);
+  sessionTokensRef.current = sessionTokens;
+
+  const [thinkingLabelCurrent, setThinkingLabelCurrent] = useState(() => pick(THINKING_LABELS));
   const [thinkingElapsed, setThinkingElapsed] = useState(0);
   const [thinkingTokens, setThinkingTokens] = useState(0);
   const thinkingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const modelConfig = selectedModel ? MODEL_CONFIGS[selectedModel] : MODEL_CONFIGS.sonnet;
+  const modelConfigRef = useRef(modelConfig);
+  modelConfigRef.current = modelConfig;
+
+  const messageCountRef = useRef(0);
   const onPickRef = useRef<(opt: string) => void>(() => {});
   const pendingAfterDiffRef = useRef<(() => void) | null>(null);
   const typeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom whenever log, live text, or panel changes
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [log, displayed, uiState]);
 
-  // Live thinking counter — runs while uiState === "thinking"
+  // Thinking timer — only runs after model is selected
   useEffect(() => {
+    if (!selectedModel) return;
     if (uiState === "thinking") {
       setThinkingElapsed(0);
       setThinkingTokens(0);
       setThinkingLabelCurrent(pick(THINKING_LABELS));
       thinkingTimerRef.current = setInterval(() => {
+        const cfg = modelConfigRef.current;
+        const inc = cfg.tokenMin + Math.random() * cfg.tokenRange;
         setThinkingElapsed(prev => prev + 1);
-        setThinkingTokens(prev => Math.round((prev + 0.08 + Math.random() * 0.22) * 10) / 10);
+        setThinkingTokens(prev => Math.round((prev + inc) * 10) / 10);
+        setSessionTokens(prev => prev + Math.round(inc * 100));
       }, 1000);
     } else {
       if (thinkingTimerRef.current) { clearInterval(thinkingTimerRef.current); thinkingTimerRef.current = null; }
     }
     return () => { if (thinkingTimerRef.current) { clearInterval(thinkingTimerRef.current); thinkingTimerRef.current = null; } };
-  }, [uiState]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uiState, selectedModel]);
 
-  // ── deliver ────────────────────────────────────────────────────────────
+  // ── deliver ──────────────────────────────────────────────────────────────
   const deliverRef = useRef<(msg: string, opts: string[], onPick: (opt: string) => void) => void>(() => {});
   deliverRef.current = (msg, opts, onPick) => {
+    const cfg = modelConfigRef.current;
     setStatus(makeStatus());
     setUiState("thinking");
     setCurrentMsg("");
     setCurrentOpts([]);
     onPickRef.current = onPick;
-    // 5–20 second thinking delay
+
+    let finalMsg = msg;
+    if (cfg.preambles.length > 0 && Math.random() < 0.4) {
+      finalMsg = pick(cfg.preambles) + msg;
+    }
+
+    const isFirst = messageCountRef.current === 0;
+    messageCountRef.current += 1;
+    const delay = isFirst
+      ? cfg.firstMin + Math.random() * cfg.firstRange
+      : cfg.thinkingMin + Math.random() * cfg.thinkingRange;
+
     setTimeout(() => {
-      setCurrentMsg(msg);
+      setCurrentMsg(finalMsg);
       setCurrentOpts(opts);
       setUiState("typing");
-    }, 5000 + Math.random() * 15000);
+    }, delay);
   };
 
-  // ── Game logic ─────────────────────────────────────────────────────────
+  // ── Game logic ────────────────────────────────────────────────────────────
   const startReactionRef = useRef<(turnNum: number) => void>(() => {});
   const startActivityRef = useRef<(turnNum: number) => void>(() => {});
 
@@ -258,8 +452,9 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
       setLog(prev => [...prev, { role: "claude", text: msg }, { role: "player", text: `> ${opt}` }]);
       setCurrentMsg(""); setCurrentOpts([]);
       if (opt === "Lopetetaan") {
+        const total = sessionTokensRef.current;
         setEndStats({
-          tokens: `${(50 + Math.random() * 150).toFixed(0)},${Math.floor(Math.random() * 900)}`,
+          tokens: fmtTokens(total),
           context: 80 + Math.floor(Math.random() * 15),
           duration: `${2 + Math.floor(Math.random() * 28)}m ${Math.floor(Math.random() * 60)}s`,
         });
@@ -277,12 +472,11 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
   };
 
   startActivityRef.current = (turnNum) => {
-    const act = makeActivity(players, turnNum);
+    const act = makeActivity(players, turnNum, modelConfigRef.current.sipMult);
     deliverRef.current(act.message, act.options, (opt) => {
       setLog(prev => [...prev, { role: "claude", text: act.message }, { role: "player", text: `> ${opt}` }]);
       setCurrentMsg(""); setCurrentOpts([]);
 
-      // Waterfall refusal
       if (act.type === "waterfall" && opt === "Ei kiitos") {
         const wfMsg = "Ei kiitos? Selvä. Kaikki juo kaksi ylimääräistä. Aloitetaan silti.";
         deliverRef.current(wfMsg, ["Joopa joo"], () => {
@@ -293,7 +487,6 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
         return;
       }
 
-      // Fact: "Lopeta faktat" gets a brief complaint
       if (act.type === "fact" && opt === "Lopeta faktat") {
         const stopMsg = "Ok, ei enää faktoja. Palataan tärkeämpiin asioihin, eli juomiseen.";
         deliverRef.current(stopMsg, ["Selvä"], () => {
@@ -304,7 +497,6 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
         return;
       }
 
-      // Trivia: reveal the answer, then go to reaction
       if (act.type === "trivia") {
         const answer = act.meta?.answer ?? "?";
         const sips = act.meta?.sips ?? 3;
@@ -329,8 +521,9 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
     });
   };
 
-  // ── Bootstrap ──────────────────────────────────────────────────────────
+  // ── Bootstrap — fires when model is selected ─────────────────────────────
   useEffect(() => {
+    if (!selectedModel) return;
     const msg = `${pick(GREETINGS)}, ${pick(GROUP_NICKS)}. Näyttää siltä että teillä on ${pick(MOOD_WORDS)}. Mitä haluatte tehdä?`;
     deliverRef.current(msg, ["Juoda", "Ottaa väliveden", "Päätä sinä"], (opt) => {
       setLog(prev => [...prev, { role: "claude", text: msg }, { role: "player", text: `> ${opt}` }]);
@@ -347,9 +540,9 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
       startActivityRef.current(1);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedModel]);
 
-  // ── Typewriter ─────────────────────────────────────────────────────────
+  // ── Typewriter ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (uiState !== "typing") {
       if (typeTimerRef.current) { clearInterval(typeTimerRef.current); typeTimerRef.current = null; }
@@ -358,6 +551,7 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
     let i = 0;
     setDisplayed("");
     if (typeTimerRef.current) clearInterval(typeTimerRef.current);
+    const ms = modelConfigRef.current.typewriterMs;
     typeTimerRef.current = setInterval(() => {
       i++;
       setDisplayed(currentMsg.slice(0, i));
@@ -366,7 +560,7 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
         typeTimerRef.current = null;
         setUiState("waiting");
       }
-    }, 22);
+    }, ms);
     return () => { if (typeTimerRef.current) { clearInterval(typeTimerRef.current); typeTimerRef.current = null; } };
   }, [uiState, currentMsg]);
 
@@ -380,17 +574,29 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
     if (pendingAfterDiffRef.current) { pendingAfterDiffRef.current(); pendingAfterDiffRef.current = null; }
   };
 
-  // ── End screen ─────────────────────────────────────────────────────────
+  // ── Model selection screen ────────────────────────────────────────────────
+  if (!selectedModel) {
+    return <ModelSelectScreen onSelect={(key) => setSelectedModel(key)} />;
+  }
+
+  // ── End screen ────────────────────────────────────────────────────────────
   if (uiState === "end" && endStats) {
     return (
       <div className="min-h-screen bg-[#111] font-mono flex flex-col items-center justify-center px-6 py-12 text-sm">
         <div className="w-full max-w-sm space-y-5">
+          <div className="text-center">
+            <AsciiMascot className="inline-block" />
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-amber-400 text-2xl">◆</span>
             <span className="text-white text-xl font-bold">Claude</span>
           </div>
           <p className="text-gray-300 text-base leading-relaxed">Session päättyi.</p>
           <div className="bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl p-5 space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Model:</span>
+              <span className="text-green-400">{modelConfig.label}</span>
+            </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Tokens used:</span>
               <span className="text-amber-400">{endStats.tokens}</span>
@@ -419,7 +625,7 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
     );
   }
 
-  // ── Main render ────────────────────────────────────────────────────────
+  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <div className="bg-[#111] font-mono text-sm flex flex-col" style={{ height: "100dvh" }}>
       <StatusBar
@@ -428,9 +634,10 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
         thinkingLabel={thinkingLabelCurrent}
         thinkingElapsed={thinkingElapsed}
         thinkingTokens={thinkingTokens}
+        sessionTokens={sessionTokens}
+        version={modelConfig.version}
       />
 
-      {/* Scrollable conversation log */}
       <div ref={logRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {log.map((entry, i) => (
           <div key={i} className={`flex gap-2 ${entry.role === "player" ? "justify-end" : ""}`}>
@@ -447,7 +654,6 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
           </div>
         ))}
 
-        {/* Live Claude bubble — visible during thinking, typing AND waiting */}
         {(uiState === "thinking" || uiState === "typing" || uiState === "waiting") && (
           <div className="flex gap-2">
             <span className="text-amber-400 shrink-0 leading-6 mt-0.5 select-none">◆</span>
@@ -467,7 +673,6 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
         )}
       </div>
 
-      {/* Player options */}
       {uiState === "waiting" && currentOpts.length > 0 && (
         <div className="shrink-0 px-4 pt-3 pb-6 space-y-2.5 border-t border-[#252525] bg-[#0d0d0d] max-h-[50vh] overflow-y-auto">
           {currentOpts.map((opt, i) => (
