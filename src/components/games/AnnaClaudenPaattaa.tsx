@@ -125,7 +125,9 @@ function fmtTokens(n: number): string {
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
-type LogEntry = { role: "claude" | "player"; text: string };
+type LogEntry =
+  | { role: "claude" | "player"; text: string }
+  | { role: "diff"; file: string; pairs: [string, string][] };
 type StatusState = { context: number };
 type ActivityType =
   | "everyone" | "take" | "give" | "waterfall"
@@ -302,10 +304,11 @@ function makeActivity(players: string[], _turnNum: number, sipMult: number): Act
     case "trivia": {
       const t = pick(TRIVIA);
       const ts = sip(t.sips);
+      const opts = pickN([t.answer, ...t.wrong], 4) as string[];
       return {
         type,
-        message: `Kysymys ${p}:lle: ${t.question} — Jos tiesit, saat antaa huikat. Jos et, juo ${ts}.`,
-        options: [`${p} tiesi! 🎓`, `${p} ei tiennyt`, "Ei kukaan tiennyt"],
+        message: `Kysymys ${p}:lle: ${t.question}`,
+        options: opts,
         meta: { answer: t.answer, sips: ts },
       };
     }
@@ -317,9 +320,10 @@ function makeActivity(players: string[], _turnNum: number, sipMult: number): Act
 }
 
 // ── DiffModal ─────────────────────────────────────────────────────────────────
-function DiffModal({ onClose }: { onClose: () => void }) {
-  const [pairs] = useState(() => pickN(DIFF_POOL, 2 + Math.floor(Math.random() * 2)));
+function DiffModal({ onClose }: { onClose: (file: string, pairs: [string, string][]) => void }) {
+  const [pairs] = useState(() => pickN(DIFF_POOL, 2 + Math.floor(Math.random() * 2)) as [string, string][]);
   const [file] = useState(() => pick(DIFF_FILES));
+  const dismiss = () => onClose(file, pairs);
   return (
     <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4">
       <div className="bg-[#1e1e1e] border border-[#444] rounded-lg w-full max-w-sm shadow-2xl font-mono text-xs overflow-hidden">
@@ -343,9 +347,9 @@ function DiffModal({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <div className="flex gap-2 px-4 py-3 border-t border-[#3c3c3c]">
-          <button onClick={onClose} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold transition-colors">Kyllä</button>
-          <button onClick={onClose} className="flex-1 py-2.5 bg-[#3c3c3c] hover:bg-[#505050] text-gray-300 rounded font-bold transition-colors">Ei</button>
-          <button onClick={onClose} className="flex-1 py-2.5 bg-[#3c3c3c] hover:bg-[#505050] text-gray-400 rounded font-bold transition-colors text-[11px]">Älä kysy enää</button>
+          <button onClick={dismiss} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold transition-colors">Kyllä</button>
+          <button onClick={dismiss} className="flex-1 py-2.5 bg-[#3c3c3c] hover:bg-[#505050] text-gray-300 rounded font-bold transition-colors">Ei</button>
+          <button onClick={dismiss} className="flex-1 py-2.5 bg-[#3c3c3c] hover:bg-[#505050] text-gray-400 rounded font-bold transition-colors text-[11px]">Älä kysy enää</button>
         </div>
       </div>
     </div>
@@ -415,15 +419,15 @@ function StatusBar({
   status: StatusState; sessionTokens: number; version: string;
 }) {
   return (
-    <div className="shrink-0 bg-[#0a0a0a] border-b border-[#222] px-3 py-1.5 font-mono text-xs">
+    <div className="shrink-0 bg-[#0a0a0a] border-b border-[#222] px-3 py-2 font-mono text-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
           <span className="text-amber-400 shrink-0">◆</span>
-          <span className="text-gray-600 text-[10px] truncate">{version}</span>
+          <span className="text-gray-500 text-xs truncate">{version}</span>
         </div>
-        <div className="flex items-center gap-2 shrink-0 text-[10px]">
+        <div className="flex items-center gap-2 shrink-0 text-xs">
           <span className="text-amber-900 hidden sm:inline">{ctxBar(status.context)} {status.context}%</span>
-          <span className="text-gray-600">{(sessionTokens / 1000).toFixed(1)}k</span>
+          <span className="text-gray-500">{(sessionTokens / 1000).toFixed(1)}k</span>
         </div>
       </div>
     </div>
@@ -569,8 +573,8 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
         consecutiveAutoRef.current = 0;
       }
 
-      // Occasionally inject Lopetetaan into choice activities
-      const addEnd = opts.length > 0 && turnNum >= 4 && Math.random() < 0.28;
+      // Occasionally inject Lopetetaan into choice activities (never into trivia answer buttons)
+      const addEnd = opts.length > 0 && turnNum >= 4 && Math.random() < 0.28 && act.type !== "trivia";
       if (addEnd) lastEndOptionTurnRef.current = turnNum;
       const finalOpts = addEnd ? [...opts, "Lopetetaan"] : opts;
 
@@ -584,18 +588,14 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
           setLog(prev => [...prev, { role: "claude", text: act.message }]);
         }
 
-        // Trivia: show answer then auto-continue
+        // Trivia: reveal correct answer then auto-continue
         if (act.type === "trivia") {
-          const answer = act.meta?.answer ?? "?";
+          const correctAnswer = act.meta?.answer ?? "?";
           const sips = act.meta?.sips ?? 3;
-          let followMsg: string;
-          if (opt.includes("tiesi!")) {
-            followMsg = `Vastaus: ${answer} Oikein! Saat antaa ${Math.ceil(sips / 2)} huikkaa.`;
-          } else if (opt.includes("ei tiennyt") && !opt.includes("kukaan")) {
-            followMsg = `Vastaus: ${answer} Väärin. Juo ${sips} huikkaa.`;
-          } else {
-            followMsg = `Vastaus: ${answer} Ei kukaan? Kaikki juo ${Math.ceil(sips / 2)}.`;
-          }
+          const isCorrect = opt === correctAnswer;
+          const followMsg = isCorrect
+            ? `Oikein! ✓ ${correctAnswer} Saat antaa ${Math.ceil(sips / 2)} huikkaa.`
+            : `Väärin. Oikea vastaus: ${correctAnswer} Juo ${sips} huikkaa.`;
           deliverRef.current(followMsg, [], () => {
             setLog(prev => [...prev, { role: "claude", text: followMsg }]);
             setCurrentMsg(""); setCurrentOpts([]);
@@ -673,7 +673,8 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
     onPickRef.current(opt);
   };
 
-  const closeDiff = () => {
+  const closeDiff = (file: string, pairs: [string, string][]) => {
+    setLog(prev => [...prev, { role: "diff", file, pairs }]);
     setDiffVisible(false);
     if (pendingAfterDiffRef.current) { pendingAfterDiffRef.current(); pendingAfterDiffRef.current = null; }
   };
@@ -728,9 +729,6 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
   }
 
   // ── Main render ───────────────────────────────────────────────────────────
-  // Single scroll container: history + live bubble + options all scroll together.
-  // When the log is empty, the live bubble appears at the top (not the bottom).
-  // Auto-scroll keeps the latest content and options in view at all times.
   return (
     <div className="bg-[#111] font-mono text-sm flex flex-col" style={{ height: "100dvh" }}>
       <StatusBar
@@ -739,65 +737,93 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
         version={modelConfig.version}
       />
 
-      {/* Single scrollable area — history + live bubble */}
-      <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-3 space-y-3">
+      {/* Centered chat column — constrained on desktop */}
+      <div className="flex-1 min-h-0 flex flex-col w-full md:max-w-lg md:mx-auto">
 
-        {/* Committed history */}
-        {log.map((entry, i) => (
-          <div key={i} className={`flex gap-2 ${entry.role === "player" ? "justify-end" : ""}`}>
-            {entry.role === "claude" && (
-              <span className="text-amber-400 shrink-0 leading-6 mt-0.5 select-none">◆</span>
-            )}
-            <p className={`text-sm leading-relaxed max-w-[88%] px-3 py-2 rounded-xl ${
-              entry.role === "claude"
-                ? "text-green-300 bg-[#191919] border border-[#2a2a2a]"
-                : "text-amber-300"
-            }`}>
-              {entry.text}
+        {/* Scrollable history + live bubble */}
+        <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-3 space-y-3">
+
+          {/* Committed history */}
+          {log.map((entry, i) =>
+            entry.role === "diff" ? (
+              <div key={i} className="text-xs rounded-lg overflow-hidden border border-[#2a2a2a]">
+                <div className="px-3 py-1.5 bg-[#1e1e1e] border-b border-[#2a2a2a] text-blue-400 flex items-center gap-1.5">
+                  <span className="text-green-600 select-none">✓</span>
+                  <span>{entry.file}</span>
+                </div>
+                {entry.pairs.map(([rem, add], j) => (
+                  <div key={j}>
+                    <div className="px-3 py-0.5 bg-red-950/40 text-red-400">
+                      <span className="text-red-600 mr-1.5 select-none">−</span>{rem}
+                    </div>
+                    <div className="px-3 py-0.5 bg-green-950/40 text-green-400">
+                      <span className="text-green-600 mr-1.5 select-none">+</span>{add}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div key={i} className={entry.role === "player" ? "flex justify-end" : ""}>
+                <p className={`text-sm leading-relaxed max-w-[88%] px-3 py-2 rounded-xl ${
+                  entry.role === "claude"
+                    ? "text-green-300 bg-[#191919] border border-[#2a2a2a]"
+                    : "text-amber-300"
+                }`}>
+                  {entry.text}
+                </p>
+              </div>
+            )
+          )}
+
+          {/* Live Claude bubble */}
+          <div>
+            <p className="text-sm leading-relaxed text-green-300 bg-[#191919] border border-[#2a2a2a] px-3 py-2 rounded-xl max-w-[88%] min-h-[2.25rem]">
+              {uiState === "thinking" ? (
+                <span className="text-gray-600 animate-pulse">
+                  {thinkingLabelCurrent}...
+                  <span className="text-gray-700 ml-1 text-xs">{thinkingElapsed}s · {thinkingTokens.toFixed(1)}k tokens</span>
+                </span>
+              ) : (
+                <>
+                  {displayed}
+                  {uiState === "typing" && (
+                    <span className="inline-block w-1.5 h-[1.1em] bg-green-400 ml-0.5 animate-pulse align-text-bottom" />
+                  )}
+                </>
+              )}
             </p>
           </div>
-        ))}
 
-        {/* Live Claude bubble — always present during active game */}
-        <div className="flex gap-2">
-          <span className="text-amber-400 shrink-0 leading-6 mt-0.5 select-none">◆</span>
-          <p className="text-sm leading-relaxed text-green-300 bg-[#191919] border border-[#2a2a2a] px-3 py-2 rounded-xl max-w-[88%] min-h-[2.25rem]">
-            {uiState === "thinking" ? (
-              <span className="text-gray-600 animate-pulse">
-                {thinkingLabelCurrent}...
-                <span className="text-gray-700 ml-1 text-xs">{thinkingElapsed}s · {thinkingTokens.toFixed(1)}k tokens</span>
-              </span>
-            ) : (
-              <>
-                {displayed}
-                {uiState === "typing" && (
-                  <span className="inline-block w-1.5 h-[1.1em] bg-green-400 ml-0.5 animate-pulse align-text-bottom" />
-                )}
-              </>
-            )}
-          </p>
         </div>
+
+        {/* Fixed-height bottom panel — never changes height, no layout reflow */}
+        {uiState === "waiting" && currentOpts.length > 0 ? (
+          <div className="h-64 shrink-0 border-t border-[#1a1a1a] px-4 pt-2 pb-4 space-y-2 overflow-y-auto">
+            {currentOpts.map((opt, i) => (
+              <button
+                key={i}
+                onClick={() => handleOptionPick(opt)}
+                className={`w-full text-left px-4 py-3.5 rounded-xl border border-l-2 transition-all text-sm active:scale-[0.98] ${
+                  opt === "Lopetetaan"
+                    ? "bg-[#1a1010] border-red-900/50 border-l-red-800/60 text-red-400/80 hover:border-red-700/70 hover:text-red-300 hover:bg-[#221515]"
+                    : "bg-[#1a1a1a] border-[#2e2e2e] border-l-amber-600/50 text-amber-300 hover:border-[#444] hover:border-l-amber-400 hover:bg-[#202020]"
+                }`}
+              >
+                <span className="text-gray-600 mr-2 select-none">&gt;</span>{opt}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="h-64 shrink-0 border-t border-[#1a1a1a] flex flex-col justify-center px-5 gap-4">
+            <div className="h-px bg-[#222]" />
+            <div className="text-gray-700 text-sm font-mono">
+              &gt; <span className="inline-block w-2 h-[1em] bg-gray-700 animate-pulse align-text-bottom" />
+            </div>
+            <div className="h-px bg-[#222]" />
+          </div>
+        )}
 
       </div>
-
-      {/* Options panel — pinned to bottom, never scrolls away */}
-      {uiState === "waiting" && currentOpts.length > 0 && (
-        <div className="shrink-0 px-4 pt-2 pb-4 space-y-2 border-t border-[#1a1a1a]">
-          {currentOpts.map((opt, i) => (
-            <button
-              key={i}
-              onClick={() => handleOptionPick(opt)}
-              className={`w-full text-left px-4 py-3.5 rounded-xl border border-l-2 transition-all text-sm active:scale-[0.98] ${
-                opt === "Lopetetaan"
-                  ? "bg-[#1a1010] border-red-900/50 border-l-red-800/60 text-red-400/80 hover:border-red-700/70 hover:text-red-300 hover:bg-[#221515]"
-                  : "bg-[#1a1a1a] border-[#2e2e2e] border-l-amber-600/50 text-amber-300 hover:border-[#444] hover:border-l-amber-400 hover:bg-[#202020]"
-              }`}
-            >
-              <span className="text-gray-600 mr-2 select-none">&gt;</span>{opt}
-            </button>
-          ))}
-        </div>
-      )}
 
       {diffVisible && <DiffModal onClose={closeDiff} />}
     </div>
