@@ -481,14 +481,14 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
   const typeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
-  // Scroll history log to bottom whenever committed entries change
+  // Scroll to bottom on every content change so options stay in view
   useEffect(() => {
     if (logRef.current) {
       requestAnimationFrame(() => {
         if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
       });
     }
-  }, [log]);
+  }, [log, displayed, uiState]);
 
   // Thinking timer
   useEffect(() => {
@@ -744,9 +744,9 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
   }
 
   // ── Main render ───────────────────────────────────────────────────────────
-  // Layout: status bar → scrollable history log → fixed current-message+options panel
-  // The bottom panel always shows Claude's live message and options so they're never
-  // hidden by scroll position — history scrolls independently above.
+  // Single scroll container: history + live bubble + options all scroll together.
+  // When the log is empty, the live bubble appears at the top (not the bottom).
+  // Auto-scroll keeps the latest content and options in view at all times.
   return (
     <div className="bg-[#111] font-mono text-sm flex flex-col" style={{ height: "100dvh" }}>
       <StatusBar
@@ -759,8 +759,10 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
         version={modelConfig.version}
       />
 
-      {/* Scrollable history — committed exchanges only, never contains live content */}
-      <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-2 space-y-3">
+      {/* Single scrollable area — history + live bubble + options */}
+      <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-3 pb-5 space-y-3">
+
+        {/* Committed history */}
         {log.map((entry, i) => (
           <div key={i} className={`flex gap-2 ${entry.role === "player" ? "justify-end" : ""}`}>
             {entry.role === "claude" && (
@@ -775,14 +777,11 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
             </p>
           </div>
         ))}
-      </div>
 
-      {/* Fixed bottom panel — current Claude message + options always visible */}
-      <div className="shrink-0 border-t border-[#1e1e1e] bg-[#0a0a0a]">
-        {/* Live message bubble */}
-        <div className="px-4 pt-3 flex gap-2">
+        {/* Live Claude bubble — always present during active game */}
+        <div className="flex gap-2">
           <span className="text-amber-400 shrink-0 leading-6 mt-0.5 select-none">◆</span>
-          <p className="text-sm leading-relaxed text-green-300 bg-[#191919] border border-[#2a2a2a] px-3 py-2 rounded-xl flex-1 min-h-[2.25rem]">
+          <p className="text-sm leading-relaxed text-green-300 bg-[#191919] border border-[#2a2a2a] px-3 py-2 rounded-xl max-w-[88%] min-h-[2.25rem]">
             {uiState === "thinking" ? (
               <span className="text-gray-600 animate-pulse">{thinkingLabelCurrent}...</span>
             ) : (
@@ -796,9 +795,9 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
           </p>
         </div>
 
-        {/* Options or bottom spacing */}
-        {uiState === "waiting" && currentOpts.length > 0 ? (
-          <div className="px-4 pt-2 pb-5 space-y-2">
+        {/* Options — appear below the message once typing completes */}
+        {uiState === "waiting" && currentOpts.length > 0 && (
+          <div className="space-y-2">
             {currentOpts.map((opt, i) => (
               <button
                 key={i}
@@ -813,9 +812,8 @@ export default function AnnaClaudenPaattaa({ players, onBack }: { players: strin
               </button>
             ))}
           </div>
-        ) : (
-          <div className="pb-5" />
         )}
+
       </div>
 
       {diffVisible && <DiffModal onClose={closeDiff} />}

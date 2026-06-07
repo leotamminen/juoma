@@ -73,7 +73,12 @@ export default function Home() {
     const game = GAMES.find(g => g.id === selectedGame);
     if (game) {
       const GameComp = game.component;
-      return <GameComp players={players} onBack={() => setSelectedGame(null)} />;
+      // Fixed overlay covers navbar/footer — game gets the full viewport
+      return (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
+          <GameComp players={players} onBack={() => setSelectedGame(null)} />
+        </div>
+      );
     }
   }
 
