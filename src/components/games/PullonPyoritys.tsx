@@ -76,6 +76,18 @@ function PlayerLabel({
   );
 }
 
+// ── Toggle ─────────────────────────────────────────────────────────────────
+function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!value)}
+      className={`relative w-10 h-6 rounded-full transition-colors shrink-0 ${value ? "bg-amber-500" : "bg-gray-600"}`}
+    >
+      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${value ? "translate-x-5" : "translate-x-1"}`} />
+    </button>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 const PullonPyoritys = ({
   players,
@@ -94,6 +106,35 @@ const PullonPyoritys = ({
   );
   const [showHistory, setShowHistory] = useState(false);
 
+  // ── Settings panel ──────────────────────────────────────────────────────
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Faktat
+  const [factsEnabled, setFactsEnabled] = useState(true);
+  const [factsInterval, setFactsInterval] = useState(30);
+
+  // Autospin
+  const [autospin, setAutospin] = useState(false);
+  const autospinRef = useRef(false);
+
+  // Varoitukset
+  const [warningsEnabled, setWarningsEnabled] = useState(false);
+  const [warnStartAt, setWarnStartAt] = useState(20);
+  const [warnEvery, setWarnEvery] = useState(10);
+  const warningsEnabledRef = useRef(false);
+  const warnStartAtRef = useRef(20);
+  const warnEveryRef = useRef(10);
+  const warnedLevelsRef = useRef<Record<string, number>>(
+    players.reduce((acc, p) => ({ ...acc, [p]: 0 }), {} as Record<string, number>)
+  );
+
+  // Warning toast
+  const [warningMsg, setWarningMsg] = useState<string | null>(null);
+  const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Ref to always-current spinBottle (for autospin callbacks)
+  const spinBottleRef = useRef<() => void>(() => {});
+
   // Circle sizing via JS so it works with dynamic player count
   const arenaRef = useRef<HTMLDivElement>(null);
   const [arenaSize, setArenaSize] = useState(300);
@@ -109,6 +150,16 @@ const PullonPyoritys = ({
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
+
+  // Keep refs in sync with state so setTimeout callbacks see fresh values
+  useEffect(() => { autospinRef.current = autospin; }, [autospin]);
+  useEffect(() => { warningsEnabledRef.current = warningsEnabled; }, [warningsEnabled]);
+  useEffect(() => { warnStartAtRef.current = warnStartAt; }, [warnStartAt]);
+  useEffect(() => { warnEveryRef.current = warnEvery; }, [warnEvery]);
+
+  // Always points to the latest spinBottle closure (needed for autospin)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { spinBottleRef.current = spinBottle; });
 
   const radius = arenaSize * 0.38;
 
@@ -137,11 +188,34 @@ const PullonPyoritys = ({
       setSelectedIndex(newIndex);
       setSips(randomSips);
       setPreviousDrinkers((prev) => [{ player: players[newIndex], sips: randomSips }, ...prev]);
+      const newTotal = (sipCounter[players[newIndex]] || 0) + randomSips;
       setSipCounter((prev) => ({
         ...prev,
         [players[newIndex]]: (prev[players[newIndex]] || 0) + randomSips,
       }));
       setSpinning(false);
+
+      // Sip warning check
+      if (warningsEnabledRef.current && newTotal >= warnStartAtRef.current) {
+        const startAt = warnStartAtRef.current;
+        const every = warnEveryRef.current;
+        let threshold = startAt;
+        while (threshold + every <= newTotal) threshold += every;
+        const prevWarned = warnedLevelsRef.current[players[newIndex]] ?? 0;
+        if (threshold > prevWarned) {
+          warnedLevelsRef.current[players[newIndex]] = threshold;
+          if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+          setWarningMsg(`${players[newIndex]} on juonut ${newTotal} hörppyä tänä iltana! 🚨`);
+          warningTimerRef.current = setTimeout(() => setWarningMsg(null), 4000);
+        }
+      }
+
+      // Autospin: schedule next spin after a short buffer
+      if (autospinRef.current) {
+        setTimeout(() => {
+          if (autospinRef.current) spinBottleRef.current();
+        }, 700);
+      }
     }, 2400);
   };
 
@@ -152,15 +226,90 @@ const PullonPyoritys = ({
       {/* Constrained column */}
       <div className="w-full max-w-md flex flex-col items-center">
 
-      {/* Back button */}
-      <div className="w-full mb-4">
+      {/* Top bar */}
+      <div className="w-full mb-4 flex items-center justify-between">
         <button
           onClick={onBack}
           className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg bg-gray-800/60 border border-gray-700/50 hover:bg-gray-700/60"
         >
           ← Takaisin
         </button>
+        <button
+          onClick={() => setShowSettings(v => !v)}
+          className={`text-sm transition-colors px-3 py-1.5 rounded-lg bg-gray-800/60 border border-gray-700/50 hover:bg-gray-700/60 ${showSettings ? "text-amber-400 border-amber-700/50" : "text-gray-400 hover:text-white"}`}
+        >
+          ⚙
+        </button>
       </div>
+
+      {/* Settings panel */}
+      {showSettings && (
+        <div className="w-full mb-4 bg-gray-800/60 border border-gray-700/50 rounded-xl p-4 space-y-4">
+
+          {/* Faktat */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-white">Faktat</span>
+              <Toggle value={factsEnabled} onChange={setFactsEnabled} />
+            </div>
+            {factsEnabled && (
+              <div className="space-y-1">
+                <input
+                  type="range" min={15} max={120} step={5} value={factsInterval}
+                  onChange={e => setFactsInterval(Number(e.target.value))}
+                  className="w-full accent-amber-500"
+                />
+                <p className="text-xs text-gray-400 text-right">Faktat joka {factsInterval}s</p>
+              </div>
+            )}
+          </div>
+
+          <div className="h-px bg-gray-700/50" />
+
+          {/* Autospin */}
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-semibold text-white">Autospin</span>
+              <p className="text-xs text-gray-500 mt-0.5">Pyörittää automaattisesti</p>
+            </div>
+            <Toggle value={autospin} onChange={setAutospin} />
+          </div>
+
+          <div className="h-px bg-gray-700/50" />
+
+          {/* Varoitukset */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <span className="text-sm font-semibold text-white">Varoitukset</span>
+                <p className="text-xs text-gray-500 mt-0.5">Hörppy-hälytys pelaajalle</p>
+              </div>
+              <Toggle value={warningsEnabled} onChange={setWarningsEnabled} />
+            </div>
+            {warningsEnabled && (
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Alkaen X hörpystä</label>
+                  <input
+                    type="number" min={1} max={200} value={warnStartAt}
+                    onChange={e => setWarnStartAt(Math.max(1, Number(e.target.value)))}
+                    className="w-full bg-gray-700/60 border border-gray-600/50 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-amber-500/60"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Joka X hörppy</label>
+                  <input
+                    type="number" min={1} max={100} value={warnEvery}
+                    onChange={e => setWarnEvery(Math.max(1, Number(e.target.value)))}
+                    className="w-full bg-gray-700/60 border border-gray-600/50 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-amber-500/60"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
 
       {/* Arena */}
       <div ref={arenaRef} className="w-full max-w-md">
@@ -246,16 +395,16 @@ const PullonPyoritys = ({
       {/* Spin button */}
       <button
         onClick={spinBottle}
-        disabled={spinning}
+        disabled={spinning || autospin}
         className={`
           px-10 py-4 rounded-2xl font-bold text-lg shadow-lg transition-all duration-200
-          ${spinning
+          ${spinning || autospin
             ? "bg-gray-700 text-gray-500 cursor-not-allowed"
             : "bg-amber-500 hover:bg-amber-400 active:scale-95 text-black shadow-amber-500/30 hover:shadow-amber-400/50"
           }
         `}
       >
-        {spinning ? "Pyörittää..." : "Pyöritä pulloa"}
+        {autospin ? "Autopilot päällä" : spinning ? "Pyörittää..." : "Pyöritä pulloa"}
       </button>
 
       {/* History toggle */}
@@ -283,7 +432,23 @@ const PullonPyoritys = ({
       </div>
 
       {/* Drinking fact infobox */}
-      <DrinkingFactToast />
+      <DrinkingFactToast config={{ enabled: factsEnabled, intervalRange: [factsInterval, factsInterval] }} />
+
+      {/* Sip warning toast */}
+      {warningMsg && (
+        <div
+          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 w-[90vw] max-w-sm cursor-pointer"
+          onClick={() => setWarningMsg(null)}
+        >
+          <div className="bg-red-900/90 backdrop-blur-md border border-red-500/50 rounded-2xl px-5 py-4 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl shrink-0 mt-0.5">🚨</span>
+              <p className="text-white text-sm leading-snug">{warningMsg}</p>
+            </div>
+            <p className="text-red-400 text-xs text-center mt-2 opacity-60">Napauta sulkeaksesi</p>
+          </div>
+        </div>
+      )}
 
       </div>{/* end constrained column */}
     </div>
