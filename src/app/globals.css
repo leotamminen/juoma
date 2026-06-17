@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+  background-color: #111;
+}
+
+.layout header {
+  padding-top: env(safe-area-inset-top);
+}
+
+.layout footer {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* Light Theme (Default) */
 :root {
   --background: #ffffff;
