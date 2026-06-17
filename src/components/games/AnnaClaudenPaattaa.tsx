@@ -383,7 +383,7 @@ function ModelSelectScreen({ onSelect }: { onSelect: (key: ModelKey) => void }) 
         <div className="text-center">
           <AsciiMascot className="inline-block" />
           <div className="mt-3">
-            <h1 className="text-amber-400 font-bold text-lg">Anna Claudenin päättää</h1>
+            <h1 className="text-amber-400 font-bold text-lg">Anna Clauden päättää</h1>
             <p className="text-gray-600 text-xs mt-1">Valitse malli ennen kuin aloitat</p>
           </div>
         </div>

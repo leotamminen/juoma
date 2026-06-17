@@ -54,7 +54,7 @@ export default function Play() {
           <Placeholder players={players} onBack={goBackToSelection} />
         ) : selectedGame === "Pullon Pyöritys" ? (
           <PullonPyoritys players={players} onBack={goBackToSelection} />
-        ) : selectedGame === "Anna Claudenin päättää" ? (
+        ) : selectedGame === "Anna Clauden päättää" ? (
           <AnnaClaudenPaattaa players={players} onBack={goBackToSelection} />
         ) : null
       ) : gameSelection ? (
@@ -76,7 +76,7 @@ export default function Play() {
               "Hitler",
               "Placeholder",
               "Pullon Pyöritys",
-              "Anna Claudenin päättää",
+              "Anna Clauden päättää",
             ].map((game) => (
               <button
                 key={game}
