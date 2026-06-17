@@ -6,6 +6,7 @@ import {
   THINKING_LABELS, CATEGORIES, DIFF_POOL, DIFF_FILES, TRIVIA,
 } from "@/data/claudeGameData";
 import { drinkingFacts } from "@/data/drinkingFacts";
+import { extraTasks } from "@/data/tasks";
 
 // ── Model configs ────────────────────────────────────────────────────────────
 interface ModelConfig {
@@ -131,7 +132,7 @@ type LogEntry =
 type StatusState = { context: number };
 type ActivityType =
   | "everyone" | "take" | "give" | "waterfall"
-  | "rps" | "category" | "trivia" | "fact"
+  | "rps" | "category" | "trivia" | "fact" | "task"
   | "error_event" | "roast" | "clink" | "claude_sip"
   | "mini_comp" | "hot_seat" | "rule";
 
@@ -224,11 +225,10 @@ function makeActivity(players: string[], _turnNum: number, sipMult: number): Act
   const p = pick(players);
 
   const typePool: ActivityType[] = [
-    "everyone","everyone","everyone",
-    "take","take","take",
-    "give","give",
+    "everyone",
+    "take",
     "waterfall",
-    "fact","fact",
+    "fact","fact","fact","fact",
     "error_event","error_event",
     "roast","roast",
     "clink",
@@ -237,8 +237,9 @@ function makeActivity(players: string[], _turnNum: number, sipMult: number): Act
     "hot_seat",
     "rule",
     "rps","rps","rps","rps",
-    "category","category","category",
-    "trivia","trivia",
+    "category","category","category","category","category",
+    "trivia","trivia","trivia","trivia","trivia","trivia",
+    "task","task","task","task",
   ];
 
   const type = pick(typePool);
@@ -311,6 +312,10 @@ function makeActivity(players: string[], _turnNum: number, sipMult: number): Act
         options: opts,
         meta: { answer: t.answer, sips: ts },
       };
+    }
+    case "task": {
+      const task = pick(extraTasks);
+      return { type, message: `Tehtävä ${p}:lle: ${task}`, options: [] };
     }
     default: {
       const n = sip(2);

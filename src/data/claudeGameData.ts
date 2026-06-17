@@ -92,12 +92,28 @@ export const THINKING_LABELS = [
 ];
 
 export const CATEGORIES = [
-  "euroopan pääkaupungit","eläimet","ruoat","juomat","urheilulajit",
-  "elokuvat","automerkit","etunimet","maiden pääkaupungit","värit",
-  "hedelmät","tv-sarjat","laulajat","bändit","maat","kaupungit",
-  "ammattinimikkeet","urheilijat","käsimerkit","olutmerkit","cocktailit",
-  "suomalaiset artistit","ruokalajit","superherooat","kirjailijat",
-  "pokemon-nimet","Disney-elokuvat","90-luvun hitit","suomalaiset sanat joissa on ä",
+  "A-kirjaimella alkavat maat",
+  "NBA-joukkueet",
+  "James Bond -elokuvat",
+  "Olympialajit joissa ei juosta",
+  "asiat jotka löytyvät saunasta",
+  "suomalaiset Formula 1 -kuljettajat",
+  "ruoat joissa on juusto",
+  "Pohjoismaiden pääkaupungit",
+  "asiat jotka uppoavat veteen",
+  "Marvel-supersankarit",
+  "asiat joita löytyy baarista",
+  "ruoat jotka syödään kylmänä",
+  "FIFA-maiden lempinimet",
+  "80-luvun suomalaiset hitit",
+  "asiat joita ei saa lentokoneeseen",
+  "olutmerkit",
+  "cocktailit",
+  "suomalaiset slangisanat",
+  "pokemon-nimet",
+  "Bond-hahmot",
+  "asiat jotka alkavat kirjaimella K",
+  "elokuvat joissa joku kuolee alussa",
 ];
 
 export const DIFF_POOL: [string, string][] = [
