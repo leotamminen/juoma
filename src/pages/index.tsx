@@ -16,6 +16,7 @@ const GAMES = [
     emoji: "🎵",
     desc: "Laululotta + aloittajan arpa",
     component: Viinapiru,
+    fullScreen: false,
   },
   {
     id: "Malte",
@@ -23,6 +24,7 @@ const GAMES = [
     emoji: "🃏",
     desc: "Arvaa korttisi – anna tai ota",
     component: Malte,
+    fullScreen: false,
   },
   {
     id: "Hitler",
@@ -30,6 +32,7 @@ const GAMES = [
     emoji: "🍺",
     desc: "Klassinen korttijuomapeli",
     component: Hitler,
+    fullScreen: false,
   },
   {
     id: "PullonPyoritys",
@@ -37,6 +40,7 @@ const GAMES = [
     emoji: "🍾",
     desc: "Pyöritä pulloa, juo tulokset",
     component: PullonPyoritys,
+    fullScreen: false,
   },
   {
     id: "Juomakortit",
@@ -44,6 +48,7 @@ const GAMES = [
     emoji: "🎯",
     desc: "Satunnaiset juomatehtävät",
     component: Placeholder,
+    fullScreen: false,
   },
   {
     id: "AnnaClaudenPaattaa",
@@ -51,6 +56,7 @@ const GAMES = [
     emoji: "🤖",
     desc: "Claude Code juomapelinä",
     component: AnnaClaudenPaattaa,
+    fullScreen: true,
   },
 ];
 
@@ -73,12 +79,14 @@ export default function Home() {
     const game = GAMES.find(g => g.id === selectedGame);
     if (game) {
       const GameComp = game.component;
-      // Fixed overlay covers navbar/footer — game gets the full viewport
-      return (
-        <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
-          <GameComp players={players} onBack={() => setSelectedGame(null)} />
-        </div>
-      );
+      if (game.fullScreen) {
+        return (
+          <div style={{ position: "fixed", inset: 0, zIndex: 50 }}>
+            <GameComp players={players} onBack={() => setSelectedGame(null)} />
+          </div>
+        );
+      }
+      return <GameComp players={players} onBack={() => setSelectedGame(null)} />;
     }
   }
 

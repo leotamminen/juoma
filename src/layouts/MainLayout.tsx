@@ -4,16 +4,16 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="layout flex flex-col min-h-screen">
+    <div className="layout flex flex-col h-dvh">
       <AnimatedBackground />
 
-      <header className="bg-black/40 backdrop-blur-md text-white border-b border-white/5">
+      <header className="shrink-0 bg-black/40 backdrop-blur-md text-white border-b border-white/5">
         <Navbar />
       </header>
 
-      <main className="flex-grow">{children}</main>
+      <main className="flex-1 overflow-y-auto">{children}</main>
 
-      <footer className="bg-black/40 backdrop-blur-md text-white border-t border-white/5">
+      <footer className="shrink-0 bg-black/40 backdrop-blur-md text-white border-t border-white/5">
         <Footer />
       </footer>
     </div>

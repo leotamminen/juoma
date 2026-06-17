@@ -148,7 +148,7 @@ const PullonPyoritys = ({
   const n = players.length;
 
   return (
-    <div className="min-h-screen text-white flex flex-col items-center px-4 pt-20 pb-24 select-none">
+    <div className="text-white flex flex-col items-center px-4 pt-6 pb-10 select-none">
       {/* Constrained column */}
       <div className="w-full max-w-md flex flex-col items-center">
 

@@ -5,12 +5,8 @@ import { ThemeProvider } from "@/app/theme/ThemeContext";
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider>
-      {/* Layout sisältää globaalit osat kuten Navbarin ja Footerin */}
       <MainLayout>
-        {/* Sivun sisältö vaihtuu dynaamisesti */}
-        <main>
-          <Component {...pageProps} />
-        </main>
+        <Component {...pageProps} />
       </MainLayout>
     </ThemeProvider>
   );
