@@ -149,10 +149,6 @@ const PullonPyoritys = ({
 
   return (
     <div className="min-h-screen text-white flex flex-col items-center px-4 pt-6 pb-24 select-none">
-      {/* Header */}
-      <h2 className="text-3xl font-bold mb-1 text-amber-400 tracking-tight">Pullon Pyöritys</h2>
-      <p className="text-gray-400 text-sm mb-6">Pullo päättää kuka juo!</p>
-
       {/* Arena */}
       <div ref={arenaRef} className="w-full max-w-md">
         <div
@@ -248,25 +244,6 @@ const PullonPyoritys = ({
       >
         {spinning ? "Pyörittää..." : "Pyöritä pulloa"}
       </button>
-
-      {/* Sip counter strip */}
-      {players.length > 0 && (
-        <div className="mt-6 w-full max-w-md">
-          <p className="text-xs text-gray-500 uppercase tracking-widest text-center mb-2">Hörppy-laskuri</p>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {players.map((p) => (
-              <div
-                key={p}
-                className="flex items-center gap-1.5 bg-gray-800/70 border border-gray-700/50 rounded-xl px-3 py-1.5 text-sm backdrop-blur-sm"
-              >
-                <span className="font-semibold text-white">{p}</span>
-                <span className="text-amber-400 font-bold">{sipCounter[p] ?? 0}</span>
-                <span className="text-gray-500 text-xs">🍺</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* History toggle */}
       <div className="mt-5 w-full max-w-md">
