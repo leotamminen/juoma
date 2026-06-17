@@ -55,12 +55,17 @@
   0%, 100% { transform: translateY(-3px) rotate(-1.5deg); }
   50%       { transform: translateY(-15px) rotate(-1.5deg); }
 }
+@keyframes float5 {
+  0%, 100% { transform: translateY(-5px) rotate(1deg); }
+  50%       { transform: translateY(-12px) rotate(1deg); }
+}
 
 .float-0 { animation: float0 4.5s ease-in-out infinite; }
 .float-1 { animation: float1 5.2s ease-in-out infinite; animation-delay: -1.3s; }
 .float-2 { animation: float2 4.8s ease-in-out infinite; animation-delay: -2.7s; }
 .float-3 { animation: float3 5.5s ease-in-out infinite; animation-delay: -0.8s; }
 .float-4 { animation: float4 4.2s ease-in-out infinite; animation-delay: -3.5s; }
+.float-5 { animation: float5 5.0s ease-in-out infinite; animation-delay: -1.9s; }
 
 .spark {
   background: radial-gradient(circle, rgba(255, 190, 60, 0.95), rgba(255, 100, 10, 0));

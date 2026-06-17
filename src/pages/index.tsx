@@ -47,7 +47,7 @@ const GAMES = [
   },
   {
     id: "AnnaClaudenPaattaa",
-    label: "Anna Claudenin päättää",
+    label: "Anna Clauden päättää",
     emoji: "🤖",
     desc: "Claude Code juomapelinä",
     component: AnnaClaudenPaattaa,
