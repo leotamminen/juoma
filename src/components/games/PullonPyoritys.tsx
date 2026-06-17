@@ -148,15 +148,19 @@ const PullonPyoritys = ({
   const n = players.length;
 
   return (
-    <div className="relative min-h-screen text-white flex flex-col items-center px-4 pt-14 pb-24 select-none">
-      {/* Back button — top-left, minimal */}
-      <button
-        onClick={onBack}
-        className="absolute top-3 left-4 text-gray-500 hover:text-white text-sm transition-colors"
-      >
-        <span className="sm:hidden">←</span>
-        <span className="hidden sm:inline">← Takaisin</span>
-      </button>
+    <div className="min-h-screen text-white flex flex-col items-center px-4 pt-20 pb-24 select-none">
+      {/* Constrained column */}
+      <div className="w-full max-w-md flex flex-col items-center">
+
+      {/* Back button */}
+      <div className="w-full mb-4">
+        <button
+          onClick={onBack}
+          className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg bg-gray-800/60 border border-gray-700/50 hover:bg-gray-700/60"
+        >
+          ← Takaisin
+        </button>
+      </div>
 
       {/* Arena */}
       <div ref={arenaRef} className="w-full max-w-md">
@@ -254,8 +258,34 @@ const PullonPyoritys = ({
         {spinning ? "Pyörittää..." : "Pyöritä pulloa"}
       </button>
 
+      {/* History toggle */}
+      <div className="mt-5 w-full">
+        <button
+          onClick={() => setShowHistory((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-800/50 border border-gray-700/40 text-sm text-gray-400 hover:text-white transition-colors"
+        >
+          <span>Edelliset juojat</span>
+          <span className="text-xs">{showHistory ? "▲" : "▼"} {previousDrinkers.length} kierrosta</span>
+        </button>
+        {showHistory && previousDrinkers.length > 0 && (
+          <div className="mt-1 space-y-1 max-h-48 overflow-y-auto rounded-xl">
+            {previousDrinkers.map((entry, i) => (
+              <div
+                key={i}
+                className={`flex justify-between px-4 py-2 text-sm rounded-lg ${i === 0 ? "bg-amber-900/40 border border-amber-700/30 text-white" : "bg-gray-800/40 text-gray-400"}`}
+              >
+                <span>{entry.player}</span>
+                <span>{entry.sips} hörppyä 🍻</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Drinking fact infobox */}
       <DrinkingFactToast />
+
+      </div>{/* end constrained column */}
     </div>
   );
 };
