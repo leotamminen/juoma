@@ -91,7 +91,7 @@ export function DrinkingFactToast({ config }: Props) {
 
   return (
     <div
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[90vw] max-w-sm cursor-pointer"
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[90vw] max-w-sm cursor-pointer"
       onClick={dismiss}
     >
       <div className="bg-amber-900/90 backdrop-blur-md border border-amber-500/50 rounded-2xl px-5 py-4 shadow-2xl">

@@ -503,13 +503,13 @@ const PullonPyoritys = ({
           )}
         </div>
 
-        {/* Drinking fact toast */}
-        <DrinkingFactToast config={{ enabled: factsEnabled, intervalRange: [factsInterval, factsInterval] }} />
+        {/* Drinking fact toast — disabled during autospin to avoid interrupting the flow */}
+        <DrinkingFactToast config={{ enabled: factsEnabled && !autospin, intervalRange: [factsInterval, factsInterval] }} />
 
         {/* Sip warning toast */}
         {warningMsg && (
           <div
-            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 w-[90vw] max-w-sm cursor-pointer"
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-[90vw] max-w-sm cursor-pointer"
             onClick={() => setWarningMsg(null)}
           >
             <div className="bg-red-900/90 backdrop-blur-md border border-red-500/50 rounded-2xl px-5 py-4 shadow-2xl">
