@@ -89,8 +89,8 @@ const Navbar = () => {
             <option value="es">Español</option>
           </select>
 
-          {/* Dark Mode Switch */}
-          <div className="dark-mode-toggle">
+          {/* Dark Mode Switch — hidden, restore by removing the 'hidden' class below */}
+          <div className="hidden dark-mode-toggle">
             <input
               type="checkbox"
               id="darkModeSwitch"
