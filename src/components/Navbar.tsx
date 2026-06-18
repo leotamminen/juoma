@@ -67,9 +67,6 @@ const Navbar = () => {
 
           {/* Desktop Links */}
           <div className="hidden md:flex space-x-6">
-            <Link href="/" className="hover:text-gray-400">
-              Pelaa
-            </Link>
             <Link href="/learn" className="hover:text-gray-400">
               Opi
             </Link>
@@ -89,8 +86,8 @@ const Navbar = () => {
             <option value="es">Español</option>
           </select>
 
-          {/* Dark Mode Switch — hidden, restore by removing the 'hidden' class below */}
-          <div className="hidden dark-mode-toggle">
+          {/* Dark Mode Switch — hidden, restore by removing style={{ display: 'none' }} */}
+          <div style={{ display: 'none' }} className="dark-mode-toggle">
             <input
               type="checkbox"
               id="darkModeSwitch"
@@ -111,13 +108,6 @@ const Navbar = () => {
           ref={dropdownRef}
           className="absolute top-full left-0 w-4/5 bg-gray-800 z-50 shadow-lg transition-transform transform duration-300 ease-in-out rounded-lg"
         >
-          <Link
-            href="/"
-            className="block py-2 px-4 hover:bg-gray-700 hover:text-gray-400"
-            onClick={() => setIsOpen(false)}
-          >
-            Pelaa
-          </Link>
           <Link
             href="/learn"
             className="block py-2 px-4 hover:bg-gray-700 hover:text-gray-400"
