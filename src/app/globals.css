@@ -32,6 +32,15 @@ html, body {
   --footer-foreground: #d1d1d1;
 }
 
+/* Light Theme */
+[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #171717;
+  --link-color: #ffa51e;
+  --footer-background: #222;
+  --footer-foreground: #ffffff;
+}
+
 /* ── Animations ──────────────────────────────────────────────────────────── */
 
 @keyframes gradientShift {
